@@ -1,0 +1,341 @@
+{
+  "template": "standard",
+  "region": "강원",
+  "target_place_count": 5,
+  "actual_place_count": 5,
+  "dropped_slots": [],
+  "total_duration_min": 460,
+  "total_travel_min": 30,
+  "selected_radius_km": 10.0,
+  "tier1_max_radius_km": 50.0,
+  "selection_basis": {
+    "weights": {
+      "travel_fit": 0.25,
+      "theme_match": 0.5,
+      "popularity_score": 0.15,
+      "slot_fit": 0.1
+    },
+    "mode": "theme"
+  },
+  "theme_notes": null,
+  "tourism_belt_applied": true,
+  "belt_name": "강원",
+  "belt_boost_sum": 0.246,
+  "belt_matched_places": [
+    {
+      "place_id": 11402,
+      "name": "대포항 전망대",
+      "slot": "morning",
+      "belt_boost": 0.1,
+      "matched_seed": "대포항"
+    },
+    {
+      "place_id": 14170,
+      "name": "대포대게회직판장",
+      "slot": "lunch",
+      "belt_boost": 0.046,
+      "matched_seed": "대포항(근접 0.2km)"
+    },
+    {
+      "place_id": 11400,
+      "name": "대포항",
+      "slot": "afternoon",
+      "belt_boost": 0.1,
+      "matched_seed": "대포항"
+    }
+  ],
+  "tier1_in_course": true,
+  "tier1_fallback_reason": null,
+  "places": [
+    {
+      "order": 1,
+      "place_id": 11402,
+      "name": "대포항 전망대",
+      "visit_role": "spot",
+      "scheduled_start": "09:00",
+      "scheduled_end": "11:00",
+      "move_minutes_from_prev": null,
+      "distance_km_from_prev": null,
+      "travel_to_next_min": 46,
+      "distance_to_next_km": 6.42,
+      "latitude": 38.1760054678,
+      "longitude": 128.6061992595,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/17/2818017_image2_1.JPG",
+      "description": "대포항 전망대은(는) spot 장소입니다.",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine_anchor",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 1.0,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.45,
+          "belt_boost": 0.1,
+          "matched_seed": "대포항"
+        },
+        "reason": "첫 일정 시작점으로 선택됨",
+        "evidence": {
+          "travel_minutes_from_prev": null,
+          "distance_km_from_prev": null,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": [
+            "spot",
+            "culture"
+          ],
+          "time_slot_required": "morning",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      },
+      "belt_boost": 0.1
+    },
+    {
+      "order": 2,
+      "place_id": 22757,
+      "name": "발해역사관",
+      "visit_role": "culture",
+      "scheduled_start": "11:46",
+      "scheduled_end": "13:16",
+      "move_minutes_from_prev": 46,
+      "distance_km_from_prev": 6.42,
+      "travel_to_next_min": 47,
+      "distance_to_next_km": 6.54,
+      "latitude": 38.2005790927,
+      "longitude": 128.5396823121,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/63/3374163_image2_1.JPG",
+      "description": "속초시 노학동 시립박물관 옆에 있는 발해역사관은 전국에서 유일하게 ‘해동성국’ 발해를 재조명하는 곳이다. 지하 1층과 지상 1층의 2층 규모로 전시실과 야외 조경시설을 갖추고 있으며 발해 문화를 진흥하고 발해의 역사를 통해 민족의 자긍심과 자존심을 드높이기 위해 마련됐다. 지상 1층에는 발해의 발자취를 더듬어 볼 수 있는 시청각 자료와 함께 2006년...",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 0.8,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.3
+        },
+        "reason": "morning_2 문화 슬롯 - 이동 부담 낮음",
+        "evidence": {
+          "travel_minutes_from_prev": 10,
+          "distance_km_from_prev": 6.424,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": [
+            "spot",
+            "culture"
+          ],
+          "time_slot_required": "morning_2",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      }
+    },
+    {
+      "order": 3,
+      "place_id": 14170,
+      "name": "대포대게회직판장",
+      "visit_role": "meal",
+      "scheduled_start": "14:03",
+      "scheduled_end": "15:33",
+      "move_minutes_from_prev": 47,
+      "distance_km_from_prev": 6.54,
+      "travel_to_next_min": 6,
+      "distance_to_next_km": 0.23,
+      "latitude": 38.173222453,
+      "longitude": 128.6059215938,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/07/3588707_image2_1.jpg",
+      "description": "대포대게회직판장은 강원도 속초시 대포항에 있는 대게 직판장이다. 대포항 수산시장에서도 가깝다. 1층은 수족관과 식당, 2층은 식당만으로 꾸며 놓았다. 창가 자리에 앉으면 대포항이 한눈에 들어온다. 전망도 좋고 개방감도 있어 뷰 맛집이기도 하다. 킹크랩이나 대게뿐 아니라 식사류나 다양한 회도 즐길 수 있다. 대포 크랩을 시키면 테이블에 빈자리가 없을 정...",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 0.8,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.346,
+          "belt_boost": 0.046,
+          "matched_seed": "대포항(근접 0.2km)"
+        },
+        "reason": "점심 식사 슬롯 - 이동 부담 낮음",
+        "evidence": {
+          "travel_minutes_from_prev": 10,
+          "distance_km_from_prev": 6.54,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": "meal",
+          "time_slot_required": "lunch",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      },
+      "belt_boost": 0.046,
+      "quality_score": 1.0,
+      "quality_reason": null,
+      "quality_source": "naver"
+    },
+    {
+      "order": 4,
+      "place_id": 11400,
+      "name": "대포항",
+      "visit_role": "spot",
+      "scheduled_start": "15:39",
+      "scheduled_end": "17:39",
+      "move_minutes_from_prev": 6,
+      "distance_km_from_prev": 0.23,
+      "travel_to_next_min": 30,
+      "distance_to_next_km": 3.24,
+      "latitude": 38.1749528373,
+      "longitude": 128.6074602892,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/07/2653407_image2_1.jpg",
+      "description": "설악산 기슭의 깨끗한 바닷가에 자리 잡은 대포항은 남쪽에서 속초시로 들어오는 관문이라 할 수 있으며 설악산이 두드러진 관광지로 바뀜에 따라 고급 생선의 집산지로 유명하게 되었다. 그러나 속초가 개항되기 이전에도 설악산이 있었던 것처럼 속초가 알려지기 전에 이미 대포항은 널리 소개되었던 곳이다. 일제 때는 물론이고 6.25 사변을 전후로 이 시기에 발행...",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 0.9,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.425,
+          "belt_boost": 0.1,
+          "matched_seed": "대포항"
+        },
+        "reason": "오후 명소 슬롯 - 이동 부담 낮음",
+        "evidence": {
+          "travel_minutes_from_prev": 5,
+          "distance_km_from_prev": 0.235,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": [
+            "spot",
+            "culture"
+          ],
+          "time_slot_required": "afternoon",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      },
+      "belt_boost": 0.1
+    },
+    {
+      "order": 5,
+      "place_id": 15021,
+      "name": "앤커피스토리",
+      "visit_role": "cafe",
+      "scheduled_start": "18:09",
+      "scheduled_end": "18:49",
+      "move_minutes_from_prev": 30,
+      "distance_km_from_prev": 3.24,
+      "travel_to_next_min": null,
+      "distance_to_next_km": null,
+      "latitude": 38.1956554773,
+      "longitude": 128.5814425607,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/16/2925416_image2_1.jpg",
+      "description": "앤커피스토리은(는) cafe 장소입니다.",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 0.9,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.325
+        },
+        "reason": "afternoon_cafe 카페 슬롯 - 이동 부담 낮음",
+        "evidence": {
+          "travel_minutes_from_prev": 5,
+          "distance_km_from_prev": 3.236,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": "cafe",
+          "time_slot_required": "afternoon_cafe",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      },
+      "quality_score": 1.0,
+      "quality_reason": null,
+      "quality_source": "naver"
+    }
+  ],
+  "course_id": "e5341870-4e97-46ad-8d20-db4d471b192d"
+}

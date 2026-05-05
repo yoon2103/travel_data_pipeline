@@ -1,0 +1,24 @@
+# IDE / temp
+.history/
+.claude/
+
+# QA output
+qa_reports/
+qa_output.txt
+qa_results.json
+
+# build / cache
+node_modules/
+dist/
+__pycache__/
+*.pyc
+
+# logs
+logs/
+*.log
+
+# env
+.env
+
+# images (임시 파일만)
+# *.png  ← 이건 제거하는 걸 추천

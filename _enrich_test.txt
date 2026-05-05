@@ -1,0 +1,8 @@
+1 관악산 [spot]
+   external: 없음
+2 기절초풍왕순대 [meal]
+   source=naver  rating=None  address=서울특별시 관악구 봉천로62길 2
+3 효민공 이경직 묘역 [spot]
+   external: 없음
+4 구수옥설렁탕 [meal]
+   source=naver  rating=None  address=서울특별시 관악구 남부순환로 1674 1층 구수옥설렁탕

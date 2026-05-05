@@ -1,0 +1,126 @@
+
+============================================================
+[서울 - 코스 1]  테마=[]  동반=없음
+  총 장소: 4개  이동합계: 51분  체류합계: 270분
+  시작: 09:00  종료: 20:50
+  dropped_slots: []
+
+  [1] 공덕동 족발골목             role=spot    09:00~10:00 체류=60분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [2] 남해바다                 role=meal    11:30~12:40 체류=70분  이동=14분(0.6km)
+       선택이유: 점심 식사 슬롯 - 이동 부담 낮음
+       scores: travel=0.65 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [3] 당고개순교성지              role=spot    13:30~15:00 체류=90분  이동=22분(1.9km)
+       선택이유: 오후 명소 슬롯 - 최고 점수 선택
+       scores: travel=0.45 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [4] 다과상사                 role=cafe    20:00~20:50 체류=50분  이동=15분(0.63km)
+       선택이유: 야간 카페 슬롯 - 이동 부담 낮음
+       scores: travel=0.625 theme=0.0 pop=0.0 slot=1.0  fallback=-
+
+============================================================
+[서울 - 코스 2]  테마=['자연', '힐링']  동반=커플
+  총 장소: 4개  이동합계: 64분  체류합계: 255분
+  시작: 09:00  종료: 20:45
+  dropped_slots: []
+
+  [1] 공덕동 족발골목             role=spot    09:00~10:00 체류=60분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [2] 남산도서관 구내식당           role=meal    11:30~12:30 체류=60분  이동=31분(2.62km)
+       선택이유: 점심 식사 슬롯 - 테마 일치도 높음
+       scores: travel=0.225 theme=1.0 pop=0.0 slot=1.0  fallback=-
+  [3] 남산공원(서울)             role=spot    13:30~15:00 체류=90분  이동=12분(1.02km)
+       선택이유: 오후 명소 슬롯 - 이동 부담 낮음
+       scores: travel=0.7 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [4] 마이시크릿덴               role=cafe    20:00~20:45 체류=45분  이동=21분(1.74km)
+       선택이유: 야간 카페 슬롯 - 테마 일치도 높음
+       scores: travel=0.475 theme=0.7 pop=0.0 slot=1.0  fallback=-
+
+============================================================
+[서울 - 코스 3]  테마=['역사', '문화']  동반=가족
+  총 장소: 4개  이동합계: 58분  체류합계: 300분
+  시작: 09:00  종료: 20:50
+  dropped_slots: []
+
+  [1] 공덕동 족발골목             role=spot    09:00~10:00 체류=60분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [2] 기와                   role=meal    11:30~13:00 체류=90분  이동=25분(2.1km)
+       선택이유: 점심 식사 슬롯 - 테마 일치도 높음
+       scores: travel=0.375 theme=0.7 pop=0.0 slot=1.0  fallback=-
+  [3] 노들섬 라이브하우스           role=culture 13:30~15:10 체류=100분  이동=15분(1.24km)
+       선택이유: 오후 문화 슬롯 - 이동 부담 낮음
+       scores: travel=0.625 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [4] 고카페 용산아이파크몰점         role=cafe    20:00~20:50 체류=50분  이동=18분(1.47km)
+       선택이유: 야간 카페 슬롯 - 최고 점수 선택
+       scores: travel=0.55 theme=0.0 pop=0.0 slot=1.0  fallback=-
+
+============================================================
+[부산 - 코스 1]  테마=[]  동반=없음
+  총 장소: 1개  이동합계: 0분  체류합계: 120분
+  시작: 09:00  종료: 11:00
+  dropped_slots: []
+
+  [1] 태종대온천찜질방             role=spot    09:00~11:00 체류=120분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+
+============================================================
+[부산 - 코스 2]  테마=['자연', '힐링']  동반=커플
+  총 장소: 1개  이동합계: 0분  체류합계: 120분
+  시작: 09:00  종료: 11:00
+  dropped_slots: []
+
+  [1] 태종대온천찜질방             role=spot    09:00~11:00 체류=120분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+
+============================================================
+[부산 - 코스 3]  테마=['역사', '문화']  동반=가족
+  총 장소: 1개  이동합계: 0분  체류합계: 120분
+  시작: 09:00  종료: 11:00
+  dropped_slots: []
+
+  [1] 태종대온천찜질방             role=spot    09:00~11:00 체류=120분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+
+============================================================
+[제주 - 코스 1]  테마=[]  동반=없음
+  총 장소: 2개  이동합계: 19분  체류합계: 160분
+  시작: 09:00  종료: 14:10
+  dropped_slots: [{'slot': 'night', 'role': 'cafe', 'reason': 'replaced_by_fallback'}]
+
+  [1] 신화워터파크               role=spot    09:00~11:00 체류=120분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [2] 무로이                  role=cafe    13:30~14:10 체류=40분  이동=19분(1.59km)
+       선택이유: afternoon cafe 후보 부족으로 afternoon_spot_no_candidate
+       scores: travel=0.525 theme=0.0 pop=0.0 slot=1.0  fallback=afternoon_spot_no_candidate_fallback_to_cafe
+
+============================================================
+[제주 - 코스 2]  테마=['자연', '힐링']  동반=커플
+  총 장소: 2개  이동합계: 19분  체류합계: 160분
+  시작: 09:00  종료: 14:10
+  dropped_slots: [{'slot': 'night', 'role': 'cafe', 'reason': 'replaced_by_fallback'}]
+
+  [1] 신화워터파크               role=spot    09:00~11:00 체류=120분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [2] 무로이                  role=cafe    13:30~14:10 체류=40분  이동=19분(1.59km)
+       선택이유: afternoon cafe 후보 부족으로 afternoon_spot_no_candidate
+       scores: travel=0.525 theme=0.0 pop=0.0 slot=1.0  fallback=afternoon_spot_no_candidate_fallback_to_cafe
+
+============================================================
+[제주 - 코스 3]  테마=['역사', '문화']  동반=가족
+  총 장소: 2개  이동합계: 19분  체류합계: 160분
+  시작: 09:00  종료: 14:10
+  dropped_slots: [{'slot': 'night', 'role': 'cafe', 'reason': 'replaced_by_fallback'}]
+
+  [1] 신화워터파크               role=spot    09:00~11:00 체류=120분  이동=출발점(-)
+       선택이유: 첫 일정 시작점으로 선택됨
+       scores: travel=1.0 theme=0.0 pop=0.0 slot=1.0  fallback=-
+  [2] 무로이                  role=cafe    13:30~14:10 체류=40분  이동=19분(1.59km)
+       선택이유: afternoon cafe 후보 부족으로 afternoon_spot_no_candidate
+       scores: travel=0.525 theme=0.0 pop=0.0 slot=1.0  fallback=afternoon_spot_no_candidate_fallback_to_cafe

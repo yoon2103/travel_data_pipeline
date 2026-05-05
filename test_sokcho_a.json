@@ -1,0 +1,351 @@
+{
+  "template": "standard",
+  "region": "강원",
+  "target_place_count": 5,
+  "actual_place_count": 5,
+  "dropped_slots": [],
+  "total_duration_min": 410,
+  "total_travel_min": 30,
+  "selected_radius_km": 10.0,
+  "tier1_max_radius_km": 50.0,
+  "selection_basis": {
+    "weights": {
+      "travel_fit": 0.25,
+      "theme_match": 0.5,
+      "popularity_score": 0.15,
+      "slot_fit": 0.1
+    },
+    "mode": "theme"
+  },
+  "theme_notes": null,
+  "tourism_belt_applied": true,
+  "belt_name": "강원",
+  "belt_boost_sum": 0.2657,
+  "belt_matched_places": [
+    {
+      "place_id": 11402,
+      "name": "대포항 전망대",
+      "slot": "morning",
+      "belt_boost": 0.1,
+      "matched_seed": "대포항"
+    },
+    {
+      "place_id": 14045,
+      "name": "남경막국수",
+      "slot": "lunch",
+      "belt_boost": 0.0457,
+      "matched_seed": "대포항(근접 0.3km)"
+    },
+    {
+      "place_id": 11400,
+      "name": "대포항",
+      "slot": "afternoon",
+      "belt_boost": 0.1,
+      "matched_seed": "대포항"
+    },
+    {
+      "place_id": 14277,
+      "name": "둥개둥개",
+      "slot": "afternoon_cafe",
+      "belt_boost": 0.02,
+      "matched_seed": "대포항(근접 1.8km)"
+    }
+  ],
+  "tier1_in_course": true,
+  "tier1_fallback_reason": null,
+  "places": [
+    {
+      "order": 1,
+      "place_id": 11402,
+      "name": "대포항 전망대",
+      "visit_role": "spot",
+      "scheduled_start": "09:00",
+      "scheduled_end": "11:00",
+      "move_minutes_from_prev": null,
+      "distance_km_from_prev": null,
+      "travel_to_next_min": 46,
+      "distance_to_next_km": 6.42,
+      "latitude": 38.1760054678,
+      "longitude": 128.6061992595,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/17/2818017_image2_1.JPG",
+      "description": "대포항 전망대은(는) spot 장소입니다.",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine_anchor",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 1.0,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.45,
+          "belt_boost": 0.1,
+          "matched_seed": "대포항"
+        },
+        "reason": "첫 일정 시작점으로 선택됨",
+        "evidence": {
+          "travel_minutes_from_prev": null,
+          "distance_km_from_prev": null,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": [
+            "spot",
+            "culture"
+          ],
+          "time_slot_required": "morning",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      },
+      "belt_boost": 0.1
+    },
+    {
+      "order": 2,
+      "place_id": 22757,
+      "name": "발해역사관",
+      "visit_role": "culture",
+      "scheduled_start": "11:46",
+      "scheduled_end": "13:16",
+      "move_minutes_from_prev": 46,
+      "distance_km_from_prev": 6.42,
+      "travel_to_next_min": 47,
+      "distance_to_next_km": 6.59,
+      "latitude": 38.2005790927,
+      "longitude": 128.5396823121,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/63/3374163_image2_1.JPG",
+      "description": "속초시 노학동 시립박물관 옆에 있는 발해역사관은 전국에서 유일하게 ‘해동성국’ 발해를 재조명하는 곳이다. 지하 1층과 지상 1층의 2층 규모로 전시실과 야외 조경시설을 갖추고 있으며 발해 문화를 진흥하고 발해의 역사를 통해 민족의 자긍심과 자존심을 드높이기 위해 마련됐다. 지상 1층에는 발해의 발자취를 더듬어 볼 수 있는 시청각 자료와 함께 2006년...",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 0.8,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.3
+        },
+        "reason": "morning_2 문화 슬롯 - 이동 부담 낮음",
+        "evidence": {
+          "travel_minutes_from_prev": 10,
+          "distance_km_from_prev": 6.424,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": [
+            "spot",
+            "culture"
+          ],
+          "time_slot_required": "morning_2",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      }
+    },
+    {
+      "order": 3,
+      "place_id": 14045,
+      "name": "남경막국수",
+      "visit_role": "meal",
+      "scheduled_start": "14:03",
+      "scheduled_end": "14:43",
+      "move_minutes_from_prev": 47,
+      "distance_km_from_prev": 6.59,
+      "travel_to_next_min": 6,
+      "distance_to_next_km": 0.25,
+      "latitude": 38.172866948,
+      "longitude": 128.6063910063,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/98/2891798_image2_1.jpg",
+      "description": "남경막국수는 강원도 속초에 있는 막국수 전문점이다. 이곳의 주메뉴는 곤드레 막국수와 들깨 막국수이다. 다른 집과 차별화한 메뉴로 강원도의 곤드레나물을 얹어 먹는 막국수와 그릇 전체가 들깨로 뒤덮어 고소한 맛을 내는 들깨 막국수이다. 곁들임으로는 메밀손만두, 즉석감자전, 오징어 순대가 있다. 주차는 전용 주차장이 있다.",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 0.8,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.3457,
+          "belt_boost": 0.0457,
+          "matched_seed": "대포항(근접 0.3km)"
+        },
+        "reason": "점심 식사 슬롯 - 이동 부담 낮음",
+        "evidence": {
+          "travel_minutes_from_prev": 10,
+          "distance_km_from_prev": 6.595,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": "meal",
+          "time_slot_required": "lunch",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      },
+      "belt_boost": 0.0457,
+      "quality_score": 1.0,
+      "quality_reason": null,
+      "quality_source": "naver"
+    },
+    {
+      "order": 4,
+      "place_id": 11400,
+      "name": "대포항",
+      "visit_role": "spot",
+      "scheduled_start": "14:49",
+      "scheduled_end": "16:49",
+      "move_minutes_from_prev": 6,
+      "distance_km_from_prev": 0.25,
+      "travel_to_next_min": 21,
+      "distance_to_next_km": 1.8,
+      "latitude": 38.1749528373,
+      "longitude": 128.6074602892,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/07/2653407_image2_1.jpg",
+      "description": "설악산 기슭의 깨끗한 바닷가에 자리 잡은 대포항은 남쪽에서 속초시로 들어오는 관문이라 할 수 있으며 설악산이 두드러진 관광지로 바뀜에 따라 고급 생선의 집산지로 유명하게 되었다. 그러나 속초가 개항되기 이전에도 설악산이 있었던 것처럼 속초가 알려지기 전에 이미 대포항은 널리 소개되었던 곳이다. 일제 때는 물론이고 6.25 사변을 전후로 이 시기에 발행...",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 0.9,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.425,
+          "belt_boost": 0.1,
+          "matched_seed": "대포항"
+        },
+        "reason": "오후 명소 슬롯 - 이동 부담 낮음",
+        "evidence": {
+          "travel_minutes_from_prev": 5,
+          "distance_km_from_prev": 0.25,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": [
+            "spot",
+            "culture"
+          ],
+          "time_slot_required": "afternoon",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      },
+      "belt_boost": 0.1
+    },
+    {
+      "order": 5,
+      "place_id": 14277,
+      "name": "둥개둥개",
+      "visit_role": "cafe",
+      "scheduled_start": "17:10",
+      "scheduled_end": "17:50",
+      "move_minutes_from_prev": 21,
+      "distance_km_from_prev": 1.8,
+      "travel_to_next_min": null,
+      "distance_to_next_km": null,
+      "latitude": 38.1873344707,
+      "longitude": 128.5941472226,
+      "first_image_url": "http://tong.visitkorea.or.kr/cms/resource/26/2919726_image2_1.jpg",
+      "description": "둥개둥개는 속초에 위치한 중·소형견 전용 반려견 카페이다. 카페뿐만 아니라 강아지 유치원과 호텔, 미용실까지 모두 운영 중이다. 카페 내부와 외부는 강아지들이 마음껏 뛰어놀 수 있는 넓은 공간이 마련되어 있다.",
+      "fallback_reason": null,
+      "selection_basis": {
+        "version": "1.0",
+        "selected_by": "engine",
+        "weights": {
+          "travel_fit": 0.25,
+          "theme_match": 0.5,
+          "popularity_score": 0.15,
+          "slot_fit": 0.1
+        },
+        "scores": {
+          "travel_fit": 0.9,
+          "theme_match": 0.0,
+          "popularity_score": 0.0,
+          "slot_fit": 1.0,
+          "penalty_multiplier": 1.0,
+          "final_score": 0.345,
+          "belt_boost": 0.02,
+          "matched_seed": "대포항(근접 1.8km)"
+        },
+        "reason": "afternoon_cafe 카페 슬롯 - 이동 부담 낮음",
+        "evidence": {
+          "travel_minutes_from_prev": 5,
+          "distance_km_from_prev": 1.803,
+          "rating": null,
+          "review_count": null,
+          "data_source": "tourapi"
+        },
+        "constraints": {
+          "role_required": "cafe",
+          "time_slot_required": "afternoon_cafe",
+          "travel_time_limit_min": 50,
+          "max_radius_km": 10.0
+        },
+        "fallback": {
+          "triggered": false,
+          "reason": null
+        }
+      },
+      "belt_boost": 0.02,
+      "quality_score": 1.0,
+      "quality_reason": null,
+      "quality_source": "naver"
+    }
+  ],
+  "course_id": "59385531-5681-4c6d-af61-ea757f04a8c1"
+}
