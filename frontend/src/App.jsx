@@ -98,7 +98,7 @@ function OverviewPage() {
 
 function IndividualPage() {
   return (
-    <div className="min-h-screen bg-[#e8eef5] flex items-center justify-center py-10">
+    <div className="min-h-[100dvh] bg-[#e8eef5] flex items-center justify-center sm:py-10">
       <DayTripApp />
     </div>
   );
@@ -106,28 +106,33 @@ function IndividualPage() {
 
 export default function App() {
   const [mode, setMode] = useState('individual');
+  const showScreenReview =
+    import.meta.env.DEV || import.meta.env.VITE_SHOW_SCREEN_REVIEW === 'true';
+  const activeMode = showScreenReview ? mode : 'individual';
 
   return (
     <div>
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-1 bg-white shadow-lg rounded-full px-3 py-2 border border-gray-200">
-        <button
-          onClick={() => setMode('individual')}
-          className={`text-[12px] font-semibold px-3 py-1 rounded-full transition-colors ${
-            mode === 'individual' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          단독 뷰
-        </button>
-        <button
-          onClick={() => setMode('overview')}
-          className={`text-[12px] font-semibold px-3 py-1 rounded-full transition-colors ${
-            mode === 'overview' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          5화면 검토
-        </button>
-      </div>
-      {mode === 'overview' ? <OverviewPage /> : <IndividualPage />}
+      {showScreenReview && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-1 bg-white shadow-lg rounded-full px-3 py-2 border border-gray-200">
+          <button
+            onClick={() => setMode('individual')}
+            className={`text-[12px] font-semibold px-3 py-1 rounded-full transition-colors ${
+              mode === 'individual' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            단독 뷰
+          </button>
+          <button
+            onClick={() => setMode('overview')}
+            className={`text-[12px] font-semibold px-3 py-1 rounded-full transition-colors ${
+              mode === 'overview' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            5화면 검토
+          </button>
+        </div>
+      )}
+      {activeMode === 'overview' ? <OverviewPage /> : <IndividualPage />}
     </div>
   );
 }

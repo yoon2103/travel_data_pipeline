@@ -5,7 +5,7 @@ export default function BottomSheet({ open, onClose, title, children }) {
   return (
     <div className="absolute inset-0 z-50 flex flex-col justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-t-3xl pt-3 pb-8 max-h-[70%] overflow-y-auto">
+      <div className="relative bg-white rounded-t-3xl pt-3 max-h-[70dvh] overflow-y-auto" style={{ paddingBottom: 'calc(32px + env(safe-area-inset-bottom, 0px))' }}>
         <div className="flex justify-center mb-3">
           <div className="w-10 h-1 bg-gray-200 rounded-full" />
         </div>

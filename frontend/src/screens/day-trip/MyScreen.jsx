@@ -19,7 +19,7 @@ export default function MyScreen({ onGoHome }) {
   const [recentCourses] = useState([]);
 
   return (
-    <div className="bg-white min-h-screen flex flex-col relative">
+    <div className="bg-white min-h-[100dvh] flex flex-col relative">
 
       {/* ─── 헤더 영역 ─── */}
       <div className="px-5 pt-8 pb-6 bg-white sticky top-0 z-20">
@@ -104,7 +104,7 @@ export default function MyScreen({ onGoHome }) {
       </div>
 
       {/* ─── 하단 고정 추천 카드 ─── */}
-      <div className="fixed bottom-[104px] left-0 right-0 px-5 z-20">
+      <div className="fixed left-0 right-0 px-5 z-20" style={{ bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))' }}>
         <button
           onClick={onGoHome}
           className="w-full flex items-center justify-between bg-[#F0F7FF] border border-[#D1E9FF] rounded-[24px] px-6 py-5 text-left shadow-[0_4px_20px_rgba(37,99,235,0.1)] active:scale-[0.97] transition-all"

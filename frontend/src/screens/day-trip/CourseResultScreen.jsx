@@ -403,7 +403,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
   /* ── 로딩 화면 ── */
   if (loading) {
     return (
-      <div className="bg-[#F8FAFC] min-h-screen flex flex-col">
+      <div className="bg-[#F8FAFC] min-h-[100dvh] flex flex-col">
         <div className="flex items-center justify-between px-4 py-4">
           <button onClick={onBack} className="p-1 -ml-1"><BackIcon /></button>
           <h2 className="text-[17px] font-bold text-[#111827]">추천 코스</h2>
@@ -420,7 +420,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
   /* ── 에러 화면 ── */
   if (apiError) {
     return (
-      <div className="bg-[#F8FAFC] min-h-screen flex flex-col">
+      <div className="bg-[#F8FAFC] min-h-[100dvh] flex flex-col">
         <div className="flex items-center justify-between px-4 py-4">
           <button onClick={onBack} className="p-1 -ml-1"><BackIcon /></button>
           <h2 className="text-[17px] font-bold text-[#111827]">추천 코스</h2>
@@ -444,7 +444,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
   }
 
   return (
-    <div className="bg-[#F8FAFC] min-h-screen flex flex-col relative overflow-x-hidden">
+    <div className="bg-[#F8FAFC] min-h-[100dvh] flex flex-col relative overflow-x-hidden">
 
       {/* 헤더 */}
       <div className="bg-[#F8FAFC] sticky top-0 z-20">
@@ -628,7 +628,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
       </div>
 
       {/* 하단 고정 버튼 */}
-      <div className="fixed bottom-0 left-0 right-0 px-6 pb-8 pt-16 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/95 to-transparent z-30 flex flex-col gap-2.5 pointer-events-none">
+      <div className="fixed bottom-0 left-0 right-0 px-6 pt-16 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/95 to-transparent z-30 flex flex-col gap-2.5 pointer-events-none" style={{ paddingBottom: 'calc(32px + env(safe-area-inset-bottom, 0px))' }}>
         {mode === 'view' ? (
           <>
             <button onClick={() => onRemakeMood?.()} className="w-full h-[52px] bg-white text-[#3B82F6] font-bold text-[14px] border border-[#E2E8F0] rounded-full shadow-sm active:bg-gray-50 pointer-events-auto flex items-center justify-center gap-2">
@@ -637,11 +637,10 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
             </button>
             <div className="flex gap-2.5 pointer-events-auto">
               <button
-                disabled={saving}
-                onClick={handleSave}
-                className="flex-1 h-[52px] bg-white text-[#1F2937] font-bold text-[14px] border border-[#E2E8F0] rounded-full shadow-sm active:bg-gray-50 disabled:opacity-50"
+                disabled
+                className="flex-1 h-[52px] bg-white text-[#94A3B8] font-bold text-[14px] border border-[#E2E8F0] rounded-full shadow-sm disabled:opacity-70"
               >
-                {saving ? '저장 중...' : '저장하기'}
+                저장 준비중
               </button>
               <button onClick={() => setMode('edit')} className="flex-1 h-[52px] bg-[#2563EB] text-white font-bold text-[15px] rounded-full shadow-[0_8px_20px_rgba(37,99,235,0.35)] active:scale-[0.98]">일정 편집</button>
             </div>

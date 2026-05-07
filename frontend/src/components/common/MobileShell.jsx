@@ -7,9 +7,9 @@ export default function MobileShell({ children, activeTab = 'home', onTabChange 
   ];
 
   return (
-    <div className="relative w-[390px] h-[844px] bg-white rounded-[40px] overflow-hidden shadow-2xl flex flex-col border border-gray-200">
+    <div className="relative w-full h-[100dvh] bg-white overflow-hidden flex flex-col sm:w-[390px] sm:h-[844px] sm:rounded-[40px] sm:shadow-2xl sm:border sm:border-gray-200">
       {/* 상태바 */}
-      <div className="flex items-center justify-between px-6 pt-3 pb-1 bg-white shrink-0">
+      <div className="flex items-center justify-between px-6 pb-1 bg-white shrink-0 sm:pt-3" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))' }}>
         <span className="text-[13px] font-semibold text-gray-900">9:41</span>
         <div className="flex items-center gap-1.5">
           <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
@@ -39,7 +39,8 @@ export default function MobileShell({ children, activeTab = 'home', onTabChange 
       {/* 하단 탭바 👉 여기에 id="main-bottom-tab" 을 추가했습니다! */}
       <div 
         id="main-bottom-tab" 
-        className="flex items-center justify-around h-[84px] bg-white border-t border-gray-100 pb-5 shrink-0 rounded-b-[40px] transition-opacity duration-200"
+        className="flex items-center justify-around bg-white border-t border-gray-100 shrink-0 sm:rounded-b-[40px] transition-opacity duration-200"
+        style={{ height: 'calc(84px + env(safe-area-inset-bottom, 0px))', paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))' }}
       >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;

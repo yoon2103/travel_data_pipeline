@@ -209,11 +209,11 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
   const anchorDisplayName = selectedAnchor ? selectedAnchor.name : null;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
       <GlobalStyles />
 
       {/* 히어로 영역 */}
-      <div style={{ position: 'relative', height: 260, flexShrink: 0, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: 'clamp(190px, 28dvh, 260px)', flexShrink: 0, overflow: 'hidden' }}>
         <img
           src={getHeroImage(region)}
           alt="hero"
@@ -223,7 +223,7 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
           position: 'absolute', inset: 0,
           background: 'linear-gradient(to bottom, transparent 40%, rgba(255,255,255,0.7) 80%, #FFFFFF 100%)',
         }} />
-        <div style={{ position: 'absolute', top: 52, left: 20 }}>
+        <div style={{ position: 'absolute', top: 'calc(34px + env(safe-area-inset-top, 0px))', left: 20 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: '#1F2937', marginBottom: 6 }}>안녕하세요! 👋</p>
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#111827', margin: 0 }}>어디로 떠나볼까요?</h1>
         </div>
@@ -231,20 +231,20 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
 
       {/* 메인 스크롤 영역 */}
       <div className="hide-scrollbar" style={{
-          flex: 1, overflowY: 'auto', padding: '24px 20px 40px', marginTop: -30,
+          flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 20px calc(18px + env(safe-area-inset-bottom, 0px))', marginTop: -30,
           background: '#FFFFFF', borderRadius: '28px 28px 0 0', position: 'relative', zIndex: 10, WebkitOverflowScrolling: 'touch'
       }}>
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 14 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8, marginLeft: 4 }}>어디로 갈까요?</p>
           <InputCard icon={<PinIcon />} value={region} onTap={() => setRegionSheet(true)} />
         </div>
 
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 14 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8, marginLeft: 4 }}>오늘 코스, 몇 시에 시작할까요?</p>
           <InputCard icon={<ClockIcon />} value={departureTime} placeholder="출발 시간을 선택해주세요" onTap={() => setTimeSheet(true)} />
         </div>
 
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 18 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8, marginLeft: 4 }}>어느 지역 주변을 돌까요?</p>
           <button
             onClick={openDeptSheet}
@@ -276,7 +276,7 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
             color: '#fff', fontSize: 18, fontWeight: 800,
             boxShadow: canGenerate ? '0 8px 20px rgba(37,99,235,0.25)' : 'none',
             border: 'none', cursor: canGenerate ? 'pointer' : 'not-allowed',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 40
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 0
           }}>
             코스 만들기
           </button>
@@ -309,7 +309,7 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
           };
 
           return (
-            <div className="hide-scrollbar" style={{ padding: '0 20px 20px', overflowY: 'auto', maxHeight: '70vh' }}>
+            <div className="hide-scrollbar" style={{ padding: '0 20px 20px', overflowY: 'auto', maxHeight: '70dvh' }}>
 
               {/* 날짜 선택 */}
               <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 10 }}>날짜</p>
@@ -384,7 +384,7 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
       {/* 지역 선택 바텀시트 */}
       <BottomSheet open={regionSheet} onClose={() => setRegionSheet(false)} title="지역 선택">
         <div className="hide-scrollbar" style={{
-          maxHeight: '60vh',
+          maxHeight: '60dvh',
           overflowY: 'auto',
           padding: '0 20px 20px',
           display: 'flex',
@@ -409,7 +409,7 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
         onClose={() => setDeptSheet(false)}
         title="출발 기준점 선택"
       >
-        <div className="hide-scrollbar" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '0 20px 30px', display: 'flex', flexDirection: 'column' }}>
+        <div className="hide-scrollbar" style={{ maxHeight: '70dvh', overflowY: 'auto', padding: '0 20px 30px', display: 'flex', flexDirection: 'column' }}>
 
           <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 12 }}>추천 출발 기준점</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>

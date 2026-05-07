@@ -69,7 +69,7 @@ export default function ConditionScreen({ onBack, onNext, courseParams, onParamC
   };
 
   return (
-    <div className="bg-white min-h-screen flex flex-col relative">
+    <div className="bg-white min-h-[100dvh] flex flex-col relative">
       <style>{animationStyle}</style>
 
       {/* 헤더 */}
@@ -141,7 +141,7 @@ export default function ConditionScreen({ onBack, onNext, courseParams, onParamC
       </div>
 
       {/* 하단 버튼 */}
-      <div className="fixed bottom-14 left-6 right-6 z-20">
+      <div className="fixed left-6 right-6 z-20" style={{ bottom: 'calc(104px + env(safe-area-inset-bottom, 0px))' }}>
         <button
           onClick={() => onNext()}
           className="w-full h-[56px] bg-[#2563EB] text-white font-bold text-[16px] rounded-full shadow-[0_8px_20px_rgba(37,99,235,0.4)] active:scale-[0.98] transition-transform"
