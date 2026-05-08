@@ -1,24 +1,56 @@
 # IDE / temp
 .history/
 .claude/
+.vscode/
+.idea/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
 
 # QA output
 qa_reports/
 qa_output.txt
 qa_results.json
-
-# build / cache
-node_modules/
-dist/
-__pycache__/
-*.pyc
+*_out.txt
+_*.txt
 
 # logs
 logs/
 *.log
+pipeline.log
 
-# env
+# env / secrets
 .env
+.env.*
+!.env.example
+!.env.*.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+!frontend/.env.*.example
 
-# images (임시 파일만)
-# *.png  ← 이건 제거하는 걸 추천
+# DB dumps / backups
+backups/
+backups/*.dump
+*.dump
+*.backup
+*.bak
+travel_db.sql
+travel_db*.sql
+
+# OS
+Thumbs.db
+.DS_Store
