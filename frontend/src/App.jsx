@@ -5,7 +5,7 @@ import ConditionScreen from './screens/day-trip/ConditionScreen';
 import CourseResultScreen from './screens/day-trip/CourseResultScreen';
 import MyScreen from './screens/day-trip/MyScreen';
 
-function DayTripApp({ initialScreen = 'home' }) {
+function DayTripApp({ initialScreen = 'home', previewFrame = false }) {
   const [screen, setScreen] = useState(initialScreen);
   const [courseParams, setCourseParams] = useState({
     // HomeScreen이 채움
@@ -34,8 +34,13 @@ function DayTripApp({ initialScreen = 'home' }) {
     if (tab === 'saved' || tab === 'my') setScreen('my');
   }
 
+  function handleRegenerateCourse(prefillParams) {
+    setCourseParams(prev => ({ ...prev, ...prefillParams }));
+    setScreen('condition');
+  }
+
   return (
-    <MobileShell activeTab={tabMap[screen] || 'home'} onTabChange={handleTabChange}>
+    <MobileShell activeTab={tabMap[screen] || 'home'} onTabChange={handleTabChange} previewFrame={previewFrame}>
       {screen === 'home' && (
         <HomeScreen
           courseParams={courseParams}
@@ -62,7 +67,12 @@ function DayTripApp({ initialScreen = 'home' }) {
           onRemakeMood={() => setScreen('condition')}
         />
       )}
-      {screen === 'my' && <MyScreen onGoHome={() => setScreen('home')} />}
+      {screen === 'my' && (
+        <MyScreen
+          onGoHome={() => setScreen('home')}
+          onRegenerateCourse={handleRegenerateCourse}
+        />
+      )}
     </MobileShell>
   );
 }
@@ -88,7 +98,7 @@ function OverviewPage() {
               <p className="text-[14px] font-bold text-gray-700">{s.label}</p>
               <p className="text-[12px] text-gray-400">{s.desc}</p>
             </div>
-            <DayTripApp initialScreen={s.id} />
+            <DayTripApp initialScreen={s.id} previewFrame />
           </div>
         ))}
       </div>
@@ -98,7 +108,7 @@ function OverviewPage() {
 
 function IndividualPage() {
   return (
-    <div className="min-h-[100dvh] bg-[#e8eef5] flex items-center justify-center sm:py-10">
+    <div className="min-h-[100dvh] bg-white">
       <DayTripApp />
     </div>
   );

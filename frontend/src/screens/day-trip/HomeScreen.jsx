@@ -209,7 +209,7 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
   const anchorDisplayName = selectedAnchor ? selectedAnchor.name : null;
 
   return (
-    <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', background: '#FFFFFF', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: '#FFFFFF', position: 'relative', overflow: 'visible' }}>
       <GlobalStyles />
 
       {/* 히어로 영역 */}
@@ -231,8 +231,8 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
 
       {/* 메인 스크롤 영역 */}
       <div className="hide-scrollbar" style={{
-          flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 20px calc(18px + env(safe-area-inset-bottom, 0px))', marginTop: -30,
-          background: '#FFFFFF', borderRadius: '28px 28px 0 0', position: 'relative', zIndex: 10, WebkitOverflowScrolling: 'touch'
+          flex: '1 0 auto', padding: '18px 20px calc(18px + env(safe-area-inset-bottom, 0px))', marginTop: -30,
+          background: '#FFFFFF', borderRadius: '28px 28px 0 0', position: 'relative', zIndex: 10
       }}>
         <div style={{ marginBottom: 14 }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8, marginLeft: 4 }}>어디로 갈까요?</p>

@@ -1,5 +1,6 @@
-// 모바일 앱 껍데기 - 상태바 + 바텀탭 포함
-export default function MobileShell({ children, activeTab = 'home', onTabChange }) {
+export default function MobileShell({ children, activeTab = 'home', onTabChange, previewFrame = false }) {
+  const showPreviewFrame =
+    previewFrame && (import.meta.env.DEV || import.meta.env.VITE_SHOW_SCREEN_REVIEW === 'true');
   const tabs = [
     { id: 'home', label: '홈', icon: HomeIcon },
     { id: 'saved', label: '저장', icon: HeartIcon },
@@ -7,39 +8,48 @@ export default function MobileShell({ children, activeTab = 'home', onTabChange 
   ];
 
   return (
-    <div className="relative w-full h-[100dvh] bg-white overflow-hidden flex flex-col sm:w-[390px] sm:h-[844px] sm:rounded-[40px] sm:shadow-2xl sm:border sm:border-gray-200">
-      {/* 상태바 */}
-      <div className="flex items-center justify-between px-6 pb-1 bg-white shrink-0 sm:pt-3" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top, 0px))' }}>
-        <span className="text-[13px] font-semibold text-gray-900">9:41</span>
-        <div className="flex items-center gap-1.5">
-          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-            <rect x="0" y="3" width="3" height="9" rx="1" fill="#1a1a1a"/>
-            <rect x="4.5" y="2" width="3" height="10" rx="1" fill="#1a1a1a"/>
-            <rect x="9" y="0" width="3" height="12" rx="1" fill="#1a1a1a"/>
-            <rect x="13.5" y="0" width="3" height="12" rx="1" fill="#e5e7eb"/>
-          </svg>
-          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-            <path d="M8 2.5a6 6 0 00-4.5 2L1 7l7 5 7-5-2.5-2.5A6 6 0 008 2.5z" fill="#1a1a1a"/>
-          </svg>
-          <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
-            <rect x="1" y="1" width="18" height="10" rx="3" stroke="#1a1a1a" strokeWidth="1.5"/>
-            <rect x="2" y="2" width="13" height="8" rx="2" fill="#1a1a1a"/>
-            <path d="M20 4h1a1 1 0 011 1v2a1 1 0 01-1 1h-1V4z" fill="#1a1a1a"/>
-          </svg>
+    <div
+      className={
+        showPreviewFrame
+          ? 'relative w-[390px] h-[844px] bg-white overflow-hidden flex flex-col rounded-[40px] shadow-2xl border border-gray-200'
+          : 'relative w-full min-h-[100dvh] bg-white flex flex-col overflow-visible'
+      }
+    >
+      {showPreviewFrame && (
+        <div className="flex items-center justify-between px-6 pt-3 pb-1 bg-white shrink-0">
+          <span className="text-[13px] font-semibold text-gray-900">9:41</span>
+          <div className="flex items-center gap-1.5">
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+              <rect x="0" y="3" width="3" height="9" rx="1" fill="#1a1a1a"/>
+              <rect x="4.5" y="2" width="3" height="10" rx="1" fill="#1a1a1a"/>
+              <rect x="9" y="0" width="3" height="12" rx="1" fill="#1a1a1a"/>
+              <rect x="13.5" y="0" width="3" height="12" rx="1" fill="#e5e7eb"/>
+            </svg>
+            <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+              <path d="M8 2.5a6 6 0 00-4.5 2L1 7l7 5 7-5-2.5-2.5A6 6 0 008 2.5z" fill="#1a1a1a"/>
+            </svg>
+            <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
+              <rect x="1" y="1" width="18" height="10" rx="3" stroke="#1a1a1a" strokeWidth="1.5"/>
+              <rect x="2" y="2" width="13" height="8" rx="2" fill="#1a1a1a"/>
+              <path d="M20 4h1a1 1 0 011 1v2a1 1 0 01-1 1h-1V4z" fill="#1a1a1a"/>
+            </svg>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* 메인 화면 (스크롤 영역) */}
-      <div className="flex-1 overflow-hidden relative bg-gray-50 flex flex-col">
-        <div className="flex-1 overflow-y-auto hide-scrollbar">
+      <div className={showPreviewFrame ? 'flex-1 overflow-hidden relative bg-gray-50 flex flex-col' : 'flex-1 relative bg-gray-50 flex flex-col overflow-visible'}>
+        <div className={showPreviewFrame ? 'flex-1 overflow-y-auto hide-scrollbar' : 'flex-1'}>
           {children}
         </div>
       </div>
 
-      {/* 하단 탭바 👉 여기에 id="main-bottom-tab" 을 추가했습니다! */}
-      <div 
-        id="main-bottom-tab" 
-        className="flex items-center justify-around bg-white border-t border-gray-100 shrink-0 sm:rounded-b-[40px] transition-opacity duration-200"
+      <div
+        id="main-bottom-tab"
+        className={
+          showPreviewFrame
+            ? 'flex items-center justify-around bg-white border-t border-gray-100 shrink-0 rounded-b-[40px] transition-opacity duration-200'
+            : 'sticky bottom-0 z-40 flex items-center justify-around bg-white border-t border-gray-100 shrink-0 transition-opacity duration-200'
+        }
         style={{ height: 'calc(84px + env(safe-area-inset-bottom, 0px))', paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))' }}
       >
         {tabs.map((tab) => {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MOOD_TO_THEMES } from '../../data/dayTripDummyData';
+import { saveCourseToLocalStorage } from '../../utils/savedCourses';
 
 let _addPlaceCounter = 0;
 
@@ -116,6 +117,11 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
   const [activeDragId, setActiveDragId]   = useState(null);
   const [sheetMode, setSheetMode]           = useState(null);
   const [addTargetIndex, setAddTargetIndex] = useState(null);
+
+  const bottomNavOffset = 'calc(84px + env(safe-area-inset-bottom, 0px))';
+  const resultListBottomPadding = mode === 'edit'
+    ? 'calc(430px + env(safe-area-inset-bottom, 0px))'
+    : 'calc(340px + env(safe-area-inset-bottom, 0px))';
 
   // ── API 호출 ──
   useEffect(() => {
@@ -313,10 +319,24 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
       return;
     }
     setSaving(true);
-    fetch(`/api/course/${courseId}/save`, { method: 'POST' })
-      .then(res => { if (!res.ok) throw new Error(); onSave?.(); })
-      .catch(() => alert('코스 저장에 실패했어요. 다시 시도해주세요.'))
-      .finally(() => setSaving(false));
+    const result = saveCourseToLocalStorage({
+      course_id: courseId,
+      region: params?.displayRegion || params?.region,
+      summary: courseDesc,
+      places,
+      total_duration_min: totalDuration,
+      total_travel_min: totalTravel,
+      option_notice: optionNotice,
+      missing_slot_reason: missingSlotReason,
+      generation_params: params,
+    });
+    setSaving(false);
+    if (!result.ok) {
+      alert('이 브라우저에서는 저장을 사용할 수 없습니다.');
+      return;
+    }
+    alert('이 기기에 코스를 저장했어요.');
+    onSave?.();
   };
 
   /* ── 경로 재계산 ── */
@@ -470,7 +490,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
         )}
       </div>
 
-      <div className="px-5 pt-2 pb-[240px]">
+      <div className="px-5 pt-2" style={{ paddingBottom: resultListBottomPadding }}>
         {/* 상단 태그 */}
         <div className="flex items-center gap-2 mb-6">
           <div className="px-3 py-1.5 bg-white border border-[#3B82F6] text-[#3B82F6] text-[12px] font-bold rounded-full shadow-sm flex items-center gap-1">
@@ -515,7 +535,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
                   </div>
 
                   <div className="flex-1 pb-3 relative z-10">
-                    <div className="bg-white rounded-[20px] border border-[#F1F5F9] shadow-[0_4px_16px_rgba(15,23,42,0.06)] overflow-hidden">
+                    <div className="bg-white rounded-[20px] border border-[#F1F5F9] shadow-[0_4px_16px_rgba(15,23,42,0.06)] overflow-visible">
 
                       {/* 카드 헤더 */}
                       <div className="flex items-center gap-3.5 px-3 py-3">
@@ -565,8 +585,8 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
                       {/* 아코디언 펼침 */}
                       {isExpanded && (
                         <div className="px-4 pb-5 pt-1 border-t border-[#F1F5F9]/60">
-                          {place.image && <img src={place.image} className="w-full h-[180px] object-cover rounded-[16px] mb-4 mt-3 shadow-sm" alt={place.name} />}
-                          <p className="text-[13px] text-[#475569] leading-relaxed mb-1">{place.description}</p>
+                          {place.image && <img src={place.image} className="w-full max-h-[260px] object-cover rounded-[16px] mb-4 mt-3 shadow-sm" alt={place.name} />}
+                          <p className="text-[13px] text-[#475569] leading-relaxed mb-1 whitespace-pre-line break-words">{place.description}</p>
                         </div>
                       )}
                     </div>
@@ -628,7 +648,10 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
       </div>
 
       {/* 하단 고정 버튼 */}
-      <div className="fixed bottom-0 left-0 right-0 px-6 pt-16 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/95 to-transparent z-30 flex flex-col gap-2.5 pointer-events-none" style={{ paddingBottom: 'calc(32px + env(safe-area-inset-bottom, 0px))' }}>
+      <div
+        className="fixed left-0 right-0 px-6 pt-16 bg-gradient-to-t from-[#F8FAFC] via-[#F8FAFC]/95 to-transparent z-30 flex flex-col gap-2.5 pointer-events-none"
+        style={{ bottom: bottomNavOffset, paddingBottom: '16px' }}
+      >
         {mode === 'view' ? (
           <>
             <button onClick={() => onRemakeMood?.()} className="w-full h-[52px] bg-white text-[#3B82F6] font-bold text-[14px] border border-[#E2E8F0] rounded-full shadow-sm active:bg-gray-50 pointer-events-auto flex items-center justify-center gap-2">
@@ -637,10 +660,11 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
             </button>
             <div className="flex gap-2.5 pointer-events-auto">
               <button
-                disabled
-                className="flex-1 h-[52px] bg-white text-[#94A3B8] font-bold text-[14px] border border-[#E2E8F0] rounded-full shadow-sm disabled:opacity-70"
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 h-[52px] bg-white text-[#2563EB] font-bold text-[14px] border border-[#BFDBFE] rounded-full shadow-sm active:bg-blue-50 disabled:opacity-60"
               >
-                저장 준비중
+                {saving ? '저장 중' : '이 코스 저장하기'}
               </button>
               <button onClick={() => setMode('edit')} className="flex-1 h-[52px] bg-[#2563EB] text-white font-bold text-[15px] rounded-full shadow-[0_8px_20px_rgba(37,99,235,0.35)] active:scale-[0.98]">일정 편집</button>
             </div>
