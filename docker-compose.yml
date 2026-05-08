@@ -1,0 +1,30 @@
+services:
+  travel-backend:
+    build:
+      context: .
+    container_name: travel-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    networks:
+      - saju-net
+
+  travel-frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_SHOW_SAJU_LINK: ${VITE_SHOW_SAJU_LINK:-false}
+        VITE_SAJU_SERVICE_URL: ${VITE_SAJU_SERVICE_URL:-}
+    container_name: travel-frontend
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - saju-net
+
+networks:
+  saju-net:
+    external: true
+    name: saju_mbti_saju-net
