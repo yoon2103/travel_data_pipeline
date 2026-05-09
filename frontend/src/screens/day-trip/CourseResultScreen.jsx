@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MOOD_TO_THEMES } from '../../data/dayTripDummyData';
+import { getDisplayPlaceDescription } from '../../utils/placeDescription';
 import { saveCourseToLocalStorage } from '../../utils/savedCourses';
 
 let _addPlaceCounter = 0;
@@ -117,6 +118,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
   const [activeDragId, setActiveDragId]   = useState(null);
   const [sheetMode, setSheetMode]           = useState(null);
   const [addTargetIndex, setAddTargetIndex] = useState(null);
+  const [toastMessage, setToastMessage]     = useState(null);
 
   const bottomNavOffset = 'calc(84px + env(safe-area-inset-bottom, 0px))';
   const resultListBottomPadding = mode === 'edit'
@@ -188,6 +190,11 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
   })();
   const canAddPlace = !hasAddedPlace && !addBlockedReason;
 
+  const showToast = (message) => {
+    setToastMessage(message);
+    window.setTimeout(() => setToastMessage((current) => (current === message ? null : current)), 2400);
+  };
+
   /* ── 아코디언 ── */
   const toggleAccordion = (id) => {
     setExpandedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -243,7 +250,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
   /* ── 장소 추가 시트 ── */
   const openAddSheet = (index) => {
     if (addBlockedReason) {
-      alert(addBlockedReason);
+      showToast(addBlockedReason);
       return;
     }
     const insertAfterPlaceId = places[index]?.place_id;
@@ -315,7 +322,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
   /* ── 저장하기 ── */
   const handleSave = () => {
     if (!courseId) {
-      alert('저장할 코스 정보가 없습니다.');
+      showToast('저장할 코스 정보가 없습니다.');
       return;
     }
     setSaving(true);
@@ -332,10 +339,10 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
     });
     setSaving(false);
     if (!result.ok) {
-      alert('이 브라우저에서는 저장을 사용할 수 없습니다.');
+      showToast('저장에 실패했어요. 다시 시도해 주세요.');
       return;
     }
-    alert('이 기기에 코스를 저장했어요.');
+    showToast(result.action === 'updated' ? '이미 저장된 코스를 업데이트했어요.' : '코스를 저장했어요.');
     onSave?.();
   };
 
@@ -376,7 +383,7 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
       })
       .catch(err => {
         console.error('[Recalculate]', err);
-        alert(err.message || '경로 재계산에 실패했어요.');
+        showToast(err.message || '경로 재계산에 실패했어요.');
         setLoading(false);
       });
   };
@@ -465,6 +472,15 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
 
   return (
     <div className="bg-[#F8FAFC] min-h-[100dvh] flex flex-col relative overflow-x-hidden">
+      {toastMessage && (
+        <div
+          className="fixed left-5 right-5 z-[120] rounded-2xl bg-[#111827] px-4 py-3 text-center text-[13px] font-bold text-white shadow-[0_12px_30px_rgba(15,23,42,0.22)]"
+          style={{ bottom: 'calc(168px + env(safe-area-inset-bottom, 0px))' }}
+          role="status"
+        >
+          {toastMessage}
+        </div>
+      )}
 
       {/* 헤더 */}
       <div className="bg-[#F8FAFC] sticky top-0 z-20">
@@ -586,7 +602,12 @@ export default function CourseResultScreen({ onBack, onSave, onRemakeMood, param
                       {isExpanded && (
                         <div className="px-4 pb-5 pt-1 border-t border-[#F1F5F9]/60">
                           {place.image && <img src={place.image} className="w-full max-h-[260px] object-cover rounded-[16px] mb-4 mt-3 shadow-sm" alt={place.name} />}
-                          <p className="text-[13px] text-[#475569] leading-relaxed mb-1 whitespace-pre-line break-words">{place.description}</p>
+                          <p className="text-[13px] text-[#475569] leading-relaxed mb-1 whitespace-pre-line break-words">
+                            {getDisplayPlaceDescription(place, {
+                              region: params?.displayRegion || params?.region,
+                              index,
+                            })}
+                          </p>
                         </div>
                       )}
                     </div>

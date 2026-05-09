@@ -5,6 +5,7 @@ import {
   getSavedCourse,
   loadSavedCourses,
 } from '../../utils/savedCourses';
+import { getDisplayPlaceDescription } from '../../utils/placeDescription';
 
 /* ─── SVG 아이콘 ──────────────────────────────────── */
 const ChevronRight = () => (
@@ -32,6 +33,7 @@ export default function MyScreen({ onGoHome, onRegenerateCourse }) {
   );
   const [statusMessage, setStatusMessage] = useState(null);
   const [selectedSavedCourse, setSelectedSavedCourse] = useState(null);
+  const [deleteTargetCourse, setDeleteTargetCourse] = useState(null);
   const sajuServiceUrl = import.meta.env.VITE_SAJU_SERVICE_URL;
   const showSajuLink =
     import.meta.env.VITE_SHOW_SAJU_LINK === 'true' &&
@@ -39,7 +41,6 @@ export default function MyScreen({ onGoHome, onRegenerateCourse }) {
     isSafeExternalUrl(sajuServiceUrl);
 
   const handleDeleteSavedCourse = (courseId) => {
-    if (!window.confirm('저장한 코스를 삭제할까요?')) return;
     const result = deleteSavedCourse(courseId);
     if (!result.ok) {
       setStorageError(result.error);
@@ -51,6 +52,11 @@ export default function MyScreen({ onGoHome, onRegenerateCourse }) {
     if (selectedSavedCourse?.course_id === courseId) {
       setSelectedSavedCourse(null);
     }
+    setDeleteTargetCourse(null);
+  };
+
+  const requestDeleteSavedCourse = (course) => {
+    setDeleteTargetCourse(course);
   };
 
   const handleOpenSavedCourse = (courseId) => {
@@ -86,8 +92,16 @@ export default function MyScreen({ onGoHome, onRegenerateCourse }) {
         <SavedCourseDetail
           course={selectedSavedCourse}
           onBack={() => setSelectedSavedCourse(null)}
-          onDelete={() => handleDeleteSavedCourse(selectedSavedCourse.course_id)}
+          onDelete={() => requestDeleteSavedCourse(selectedSavedCourse)}
           onRegenerate={() => handleRegenerateSavedCourse(selectedSavedCourse)}
+        />
+      )}
+
+      {deleteTargetCourse && (
+        <DeleteConfirmSheet
+          course={deleteTargetCourse}
+          onCancel={() => setDeleteTargetCourse(null)}
+          onConfirm={() => handleDeleteSavedCourse(deleteTargetCourse.course_id)}
         />
       )}
 
@@ -103,12 +117,7 @@ export default function MyScreen({ onGoHome, onRegenerateCourse }) {
               <p className="text-[13px] text-[#64748B] font-medium">안녕하세요! 즐거운 여행 되세요.</p>
             </div>
           </div>
-          <button className="p-2 bg-[#F8FAFC] rounded-full border border-[#F1F5F9]">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="12" cy="12" r="3" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+          <div className="w-10" aria-hidden="true" />
         </div>
       </div>
 
@@ -207,7 +216,7 @@ export default function MyScreen({ onGoHome, onRegenerateCourse }) {
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      handleDeleteSavedCourse(course.course_id);
+                      requestDeleteSavedCourse(course);
                     }}
                     className="rounded-full border border-[#FEE2E2] px-3 py-2 text-[12px] font-bold text-[#EF4444] active:bg-red-50"
                     aria-label={`${course.region} 저장 코스 삭제`}
@@ -379,16 +388,56 @@ function SavedCourseDetail({ course, onBack, onDelete, onRegenerate }) {
                   </p>
                 </div>
               </div>
-              {place.description && (
-                <p className="mt-3 text-[13px] leading-relaxed text-[#475569] whitespace-pre-line break-words">
-                  {place.description}
-                </p>
-              )}
+              <p className="mt-3 text-[13px] leading-relaxed text-[#475569] whitespace-pre-line break-words">
+                {getDisplayPlaceDescription(place, {
+                  region: course.region,
+                  index,
+                })}
+              </p>
             </div>
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+function DeleteConfirmSheet({ course, onCancel, onConfirm }) {
+  return (
+    <>
+      <div className="fixed inset-0 z-[90] bg-black/35" onClick={onCancel} />
+      <div
+        className="fixed left-0 right-0 z-[91] rounded-t-[28px] bg-white px-5 pt-5 shadow-[0_-16px_40px_rgba(15,23,42,0.18)]"
+        style={{ bottom: 0, paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-saved-course-title"
+      >
+        <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-[#E2E8F0]" />
+        <h3 id="delete-saved-course-title" className="mb-2 text-[18px] font-extrabold text-[#111827]">
+          저장한 코스를 삭제할까요?
+        </h3>
+        <p className="mb-5 text-[13px] font-semibold leading-relaxed text-[#64748B]">
+          {course?.region || '저장한 코스'} 코스가 이 기기에서 삭제됩니다. 삭제 후에는 저장 목록에서 다시 열 수 없어요.
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-12 rounded-full border border-[#E2E8F0] bg-white text-[14px] font-extrabold text-[#475569] active:bg-gray-50"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="h-12 rounded-full bg-[#EF4444] text-[14px] font-extrabold text-white active:scale-[0.98]"
+          >
+            삭제
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 

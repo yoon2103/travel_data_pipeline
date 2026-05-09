@@ -107,17 +107,18 @@ export function loadSavedCourses() {
 export function saveCourseToLocalStorage(course) {
   const storage = getStorage();
   if (!storage) {
-    return { ok: false, course: null, courses: [], error: 'STORAGE_UNAVAILABLE' };
+    return { ok: false, course: null, courses: [], error: 'STORAGE_UNAVAILABLE', action: null };
   }
   try {
     const nextCourse = normalizeCourse(course);
     const current = safeParse(storage.getItem(SAVED_COURSES_KEY));
+    const existed = current.some((item) => String(item.course_id) === nextCourse.course_id);
     const deduped = current.filter((item) => String(item.course_id) !== nextCourse.course_id);
     const courses = [nextCourse, ...deduped].slice(0, MAX_SAVED_COURSES);
     storage.setItem(SAVED_COURSES_KEY, JSON.stringify(courses));
-    return { ok: true, course: nextCourse, courses, error: null };
+    return { ok: true, course: nextCourse, courses, error: null, action: existed ? 'updated' : 'created' };
   } catch {
-    return { ok: false, course: null, courses: [], error: 'STORAGE_UNAVAILABLE' };
+    return { ok: false, course: null, courses: [], error: 'STORAGE_UNAVAILABLE', action: null };
   }
 }
 
