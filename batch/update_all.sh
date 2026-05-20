@@ -23,6 +23,17 @@ BASELINE_JSON=""
 API_BASE_URL="http://127.0.0.1:5000"
 NO_NETWORK="false"
 SKIP_QA="false"
+CANDIDATE_ONLY="true"
+NO_PROMOTE="true"
+REVIEW_REQUIRED="true"
+ALLOW_PROMOTE_REQUESTED="false"
+APPROVED_ONLY_REHEARSAL="false"
+SHADOW_MODE="false"
+SHADOW_REPORT="false"
+SHADOW_OUTPUT_DIR="qa_reports/shadow_mode"
+VISIT_ROLE=""
+PROMOTE_UNLOCK_FILE="${EXTERNAL_PROMOTE_UNLOCK_FILE:-${ROOT_DIR}/.external_promote_unlock}"
+PROMOTE_UNLOCK_TOKEN="APPROVED_ONLY_EXTERNAL_PROMOTE_UNLOCK"
 
 usage() {
   cat <<'EOF'
@@ -49,6 +60,16 @@ Options:
   --api-base-url URL        Smoke target base URL. Default: http://127.0.0.1:5000
   --no-network              Do not call external Places APIs. Useful for command validation.
   --skip-qa                 Do not execute QA. Useful for local command validation.
+  --candidate-only          Stop after external candidate staging/review visibility. Default.
+  --no-promote              Do not promote external candidates into production places. Default.
+  --review-required         Require manual review gate before promote. Default.
+  --rehearsal               Run approved-only rehearsal preview. No production promote.
+  --approved-only-rehearsal Run approved-only rehearsal preview. No production promote.
+  --shadow-mode             Compare legacy would-promote vs approved-only candidates. No production promote.
+  --shadow-report           Write shadow mode JSON/CSV/Markdown report.
+  --shadow-output-dir DIR   Shadow report output directory. Default: qa_reports/shadow_mode
+  --visit-role ROLE         Optional review/shadow slice filter: cafe, meal, culture, or spot.
+  --allow-promote           Emergency legacy escape hatch. Requires EXTERNAL_PROMOTE_UNLOCK=true and approval file token. Not for normal operations.
   -h, --help                Show this help.
 EOF
 }
@@ -79,6 +100,16 @@ while [[ $# -gt 0 ]]; do
     --api-base-url) API_BASE_URL="${2:-}"; shift 2 ;;
     --no-network) NO_NETWORK="true"; shift ;;
     --skip-qa) SKIP_QA="true"; shift ;;
+    --candidate-only) CANDIDATE_ONLY="true"; shift ;;
+    --no-promote) NO_PROMOTE="true"; shift ;;
+    --review-required) REVIEW_REQUIRED="true"; shift ;;
+    --rehearsal) APPROVED_ONLY_REHEARSAL="true"; CANDIDATE_ONLY="true"; NO_PROMOTE="true"; REVIEW_REQUIRED="true"; shift ;;
+    --approved-only-rehearsal) APPROVED_ONLY_REHEARSAL="true"; CANDIDATE_ONLY="true"; NO_PROMOTE="true"; REVIEW_REQUIRED="true"; shift ;;
+    --shadow-mode) SHADOW_MODE="true"; CANDIDATE_ONLY="true"; NO_PROMOTE="true"; REVIEW_REQUIRED="true"; shift ;;
+    --shadow-report) SHADOW_REPORT="true"; shift ;;
+    --shadow-output-dir) SHADOW_OUTPUT_DIR="${2:-}"; shift 2 ;;
+    --visit-role) VISIT_ROLE="${2:-}"; shift 2 ;;
+    --allow-promote) ALLOW_PROMOTE_REQUESTED="true"; shift ;;
     -h|--help) usage; exit 0 ;;
     *) fail "Unknown option: $1" ;;
   esac
@@ -97,6 +128,26 @@ fi
 
 log "root=${ROOT_DIR}"
 log "mode=${MODE} region=${REGION} sources=${SOURCES} keywords=${KEYWORDS}"
+log "safety candidate_only=${CANDIDATE_ONLY} no_promote=${NO_PROMOTE} review_required=${REVIEW_REQUIRED} approved_only_rehearsal=${APPROVED_ONLY_REHEARSAL} shadow_mode=${SHADOW_MODE} shadow_report=${SHADOW_REPORT} allow_promote_requested=${ALLOW_PROMOTE_REQUESTED}"
+if [[ -n "$VISIT_ROLE" ]]; then
+  log "slice visit_role=${VISIT_ROLE}"
+fi
+
+if [[ "$ALLOW_PROMOTE_REQUESTED" == "true" ]]; then
+  if [[ "${EXTERNAL_PROMOTE_UNLOCK:-false}" != "true" ]]; then
+    fail "--allow-promote blocked: EXTERNAL_PROMOTE_UNLOCK=true is required"
+  fi
+  if [[ ! -f "$PROMOTE_UNLOCK_FILE" ]]; then
+    fail "--allow-promote blocked: approval file not found: ${PROMOTE_UNLOCK_FILE}"
+  fi
+  if [[ "$(tr -d '\r\n' < "$PROMOTE_UNLOCK_FILE")" != "$PROMOTE_UNLOCK_TOKEN" ]]; then
+    fail "--allow-promote blocked: approval file token mismatch"
+  fi
+  CANDIDATE_ONLY="false"
+  NO_PROMOTE="false"
+  REVIEW_REQUIRED="false"
+  log "legacy promote unlock accepted with env+approval file; this remains emergency-only"
+fi
 
 log "checking DB connection and required migrations"
 "$PYTHON_BIN" - <<'PY'
@@ -195,6 +246,15 @@ log "cleaning external Places"
 log "enriching external Places and loading staging_places"
 "$PYTHON_BIN" -m batch.external.enrich_external_places --run-id "$RUN_ID" --region "$REGION" --write
 
+log "building external candidate review visibility report"
+REVIEW_ARGS=(--run-id "$RUN_ID" --region "$REGION" --limit "$MAX_TOTAL")
+if [[ -n "$VISIT_ROLE" ]]; then
+  REVIEW_ARGS+=(--visit-role "$VISIT_ROLE")
+fi
+"$PYTHON_BIN" -m batch.external.stage_external_candidates "${REVIEW_ARGS[@]}"
+"$PYTHON_BIN" -m batch.external.review_external_candidates "${REVIEW_ARGS[@]}" --report --output-dir "qa_reports/external_candidate_review"
+REVIEW_REPORT_GENERATED="true"
+
 if [[ "$SKIP_QA" == "true" ]]; then
   fail "--write requires QA; remove --skip-qa"
 fi
@@ -204,6 +264,42 @@ QA_OUTPUT="$("$PYTHON_BIN" -m batch.external.qa_external_places --run-id "$RUN_I
 printf '%s\n' "$QA_OUTPUT"
 FAIL_INCREASED="$(printf '%s\n' "$QA_OUTPUT" | "$PYTHON_BIN" -c 'import json,sys; text=sys.stdin.read(); start=text.rfind("{"); print(str(json.loads(text[start:]).get("fail_increased", True)).lower())')"
 [[ "$FAIL_INCREASED" == "false" ]] || fail "QA FAIL increased; promote blocked"
+
+if [[ "$APPROVED_ONLY_REHEARSAL" == "true" ]]; then
+  log "running approved-only rehearsal preview"
+  REHEARSAL_ARGS=(-m batch.external.promote_external_places --run-id "$RUN_ID" --region "$REGION" --approved-only-rehearsal --limit "$MAX_TOTAL")
+  if [[ -n "$VISIT_ROLE" ]]; then
+    REHEARSAL_ARGS+=(--visit-role "$VISIT_ROLE")
+  fi
+  "$PYTHON_BIN" "${REHEARSAL_ARGS[@]}"
+  log "result: APPROVED_ONLY_REHEARSAL_OK"
+  exit 0
+fi
+
+if [[ "$SHADOW_MODE" == "true" ]]; then
+  log "running approved-only shadow mode preview"
+  SHADOW_ARGS=(-m batch.external.promote_external_places --run-id "$RUN_ID" --region "$REGION" --shadow-mode --limit "$MAX_TOTAL")
+  if [[ -n "$VISIT_ROLE" ]]; then
+    SHADOW_ARGS+=(--visit-role "$VISIT_ROLE")
+  fi
+  if [[ "$SHADOW_REPORT" == "true" ]]; then
+    SHADOW_ARGS+=(--report --output-dir "$SHADOW_OUTPUT_DIR")
+  fi
+  "$PYTHON_BIN" "${SHADOW_ARGS[@]}"
+  log "result: SHADOW_MODE_OK"
+  exit 0
+fi
+
+if [[ "$CANDIDATE_ONLY" == "true" || "$NO_PROMOTE" == "true" || "$REVIEW_REQUIRED" == "true" ]]; then
+  log "promote skipped by safety policy: candidate_only=${CANDIDATE_ONLY} no_promote=${NO_PROMOTE} review_required=${REVIEW_REQUIRED}"
+  log "review report generated under qa_reports/external_candidate_review"
+  log "result: CANDIDATE_REVIEW_READY"
+  exit 0
+fi
+
+if [[ "${REVIEW_REPORT_GENERATED:-false}" != "true" ]]; then
+  fail "candidate review report was not generated; promote blocked"
+fi
 
 log "promoting external staging rows into places"
 "$PYTHON_BIN" -m batch.external.promote_external_places --run-id "$RUN_ID" --region "$REGION" --qa-passed --write
