@@ -1,8 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import BottomSheet from '../../components/common/BottomSheet';
 import {
-  REGIONS, REGION_TO_DB, getHeroImage, STATIC_ANCHORS,
+  REGIONS, REGION_TO_DB, HERO_FALLBACK_IMAGE, HERO_SLIDES, STATIC_ANCHORS, THEME_SEED_TO_MOOD,
+  SEOUL_CURATED_ANCHOR_ZONE_IDS,
 } from '../../data/dayTripDummyData';
+import { trackEvent } from '../../utils/telemetry';
+
+const AUTO_DEPARTURE_TIME = '내일 09:00';
+const TIME_BAND_OPTIONS = [
+  {
+    id: 'morning',
+    label: '아침',
+    time: '09:00',
+  },
+  {
+    id: 'daytime',
+    label: '낮',
+    time: '12:00',
+  },
+  {
+    id: 'evening',
+    label: '저녁',
+    time: '17:00',
+  },
+];
+
+const DEFAULT_TIME_BAND = 'daytime';
+const getTimeBandOption = (id) => TIME_BAND_OPTIONS.find((item) => item.id === id) || TIME_BAND_OPTIONS[1];
+const mapTimeBandToDepartureTime = (bandId, dateLabel = '오늘') => `${dateLabel} ${getTimeBandOption(bandId).time}`;
+const inferTimeBandFromDepartureTime = (value) => {
+  const match = String(value || '').match(/(\d{1,2}):(\d{2})/);
+  if (!match) return DEFAULT_TIME_BAND;
+  const hour = Number(match[1]);
+  if (hour < 11) return 'morning';
+  if (hour < 16) return 'daytime';
+  return 'evening';
+};
+const isEveningTimeBand = (bandId) => bandId === 'evening';
 
 /* ─── 1. 전역 스타일 (스크롤바 제거 + 하단 탭바 강제 숨김) ────────── */
 const GlobalStyles = () => (
@@ -76,6 +110,37 @@ const Chevron = ({ color = '#CBD5E1', size = 14 }) => (
   </svg>
 );
 
+const mergeDepartureOptions = (dbRegion, apiDepartures = []) => {
+  const curated = STATIC_ANCHORS[dbRegion] || [];
+  const broadCurated = curated.filter((item) => !isSeoulCuratedAnchor(item));
+  const vibeCurated = curated.filter((item) => isSeoulCuratedAnchor(item));
+  const merged = [];
+  const seen = new Set();
+  const ordered = dbRegion === '서울'
+    ? [...vibeCurated, ...broadCurated, ...apiDepartures]
+    : [...broadCurated, ...apiDepartures, ...vibeCurated];
+  ordered.forEach((item) => {
+    if (!item) return;
+    const key = item.zone_id || item.name;
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push(item);
+  });
+  return merged;
+};
+
+const isSeoulCuratedAnchor = (item) => (
+  !!item?.is_curated_vibe || SEOUL_CURATED_ANCHOR_ZONE_IDS.includes(item?.zone_id)
+);
+
+const moodFromAnchorSeed = (item) => (
+  item?.theme_seed ? THEME_SEED_TO_MOOD[item.theme_seed] : null
+);
+
+const isNightFriendlyAnchor = (item, bandId) => (
+  isEveningTimeBand(bandId) && !item?.suppress_night_friendly
+);
+
 
 /* ─── 4. 입력 카드 컴포넌트 ────────────────────────── */
 function InputCard({ icon, value, placeholder, onTap }) {
@@ -109,13 +174,22 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
   const [departuresLoading, setDeparturesLoading] = useState(false);
   const [regionSheet, setRegionSheet] = useState(false);
   const [deptSheet, setDeptSheet] = useState(false);
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
 
   // departure_time 문자열 "오늘 9:00" 파싱 → 시트 선택기 초기값 복원
   const _parsedTime = (() => {
     const m = courseParams?.departure_time?.match(/^(오늘|내일)\s+(\d+):(\d{2})/);
     return m ? { date: m[1], hour: m[2], minute: m[3] } : null;
   })();
-  const [departureTime, setDepartureTime] = useState(courseParams?.departure_time || null);
+  const initialTimeBand = courseParams?.selected_time_band || inferTimeBandFromDepartureTime(courseParams?.departure_time);
+  const [selectedTimeBand, setSelectedTimeBand] = useState(initialTimeBand);
+  const [timeBandExpanded, setTimeBandExpanded] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const generatingResetTimerRef = useRef(null);
+  const [departureTime, setDepartureTime] = useState(
+    courseParams?.mapped_departure_time || courseParams?.departure_time || mapTimeBandToDepartureTime(initialTimeBand)
+  );
+  const [departureTimeUserSelected, setDepartureTimeUserSelected] = useState(true);
   const [timeSheet, setTimeSheet] = useState(false);
   const [selectedDate, setSelectedDate] = useState(_parsedTime?.date || '오늘');
   const [selectedHour, setSelectedHour] = useState(_parsedTime?.hour || null);
@@ -139,16 +213,50 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
     return () => { document.body.classList.remove('sheet-is-open'); };
   }, [regionSheet, deptSheet, timeSheet]);
 
+  useEffect(() => {
+    if (HERO_SLIDES.length <= 1) return undefined;
+    const timer = window.setInterval(() => {
+      setHeroSlideIndex((current) => (current + 1) % HERO_SLIDES.length);
+    }, 4200);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => () => {
+    if (generatingResetTimerRef.current) {
+      window.clearTimeout(generatingResetTimerRef.current);
+    }
+  }, []);
+
   function handleTimeConfirm() {
     if (!selectedHour) return;
     const time = `${selectedDate} ${selectedHour}:${selectedMinute}`;
     setDepartureTime(time);
+    setDepartureTimeUserSelected(true);
     onParamChange('departure_time', time);
+    onParamChange('departure_time_user_selected', true);
     setTimeSheet(false);
+  }
+
+  function handleTimeBandSelect(bandId) {
+    const mappedTime = mapTimeBandToDepartureTime(bandId);
+    setSelectedTimeBand(bandId);
+    setTimeBandExpanded(false);
+    setDepartureTime(mappedTime);
+    setDepartureTimeUserSelected(true);
+    onParamChange('selected_time_band', bandId);
+    onParamChange('mapped_departure_time', mappedTime);
+    onParamChange('departure_time', mappedTime);
+    onParamChange('departure_time_user_selected', true);
+    onParamChange('time_band_night_friendly', isNightFriendlyAnchor(selectedAnchor, bandId));
   }
 
   function handleRegionSelect(r) {
     const db = REGION_TO_DB[r] ?? r;
+    trackEvent('region_selected', {
+      region: db,
+      display_region: r,
+      screen: 'home',
+    });
     setRegion(r);
     setSelectedAnchor(null);
     setDepartures([]);
@@ -156,9 +264,17 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
     onParamChange('displayRegion', r);
     onParamChange('region', db);
     onParamChange('start_anchor', null);
+    onParamChange('start_anchor_label', null);
     onParamChange('start_lat', null);
     onParamChange('start_lon', null);
     onParamChange('zone_id', null);
+    onParamChange('selected_anchor_vibe', null);
+    onParamChange('anchor_theme_seed', null);
+    onParamChange('anchor_district', null);
+    onParamChange('is_curated_vibe_anchor', false);
+    onParamChange('condition_options_collapsed', false);
+    onParamChange('mood_seeded_by_anchor', false);
+    onParamChange('default_preset_mode', true);
     onParamChange('_homeAnchor', null);
   }
 
@@ -176,7 +292,7 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
       .then(data => {
         const list = data.departures || [];
         if (list.length > 0) {
-          setDepartures(list);
+          setDepartures(mergeDepartureOptions(dbRegion, list));
         } else {
           setDepartures(STATIC_ANCHORS[dbRegion] || []);
         }
@@ -192,21 +308,62 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
   const canGenerate = !!departureTime && !!selectedAnchor;
 
   function handleNext() {
-    if (!canGenerate) return;
+    if (!canGenerate || isGenerating) return;
+    setIsGenerating(true);
+    if (generatingResetTimerRef.current) {
+      window.clearTimeout(generatingResetTimerRef.current);
+    }
+    generatingResetTimerRef.current = window.setTimeout(() => {
+      setIsGenerating(false);
+      generatingResetTimerRef.current = null;
+    }, 3500);
+    trackEvent('course_generate_start', {
+      region: dbRegion,
+      display_region: region,
+      selected_anchor: selectedAnchor.selected_anchor ?? selectedAnchor.name,
+      departure_anchor: selectedAnchor.name,
+      anchor_district: selectedAnchor.district ?? null,
+      vibe: selectedAnchor.selected_anchor ?? selectedAnchor.name,
+      mood: courseParams?.mood,
+      theme: selectedAnchor.theme_seed ?? null,
+      selected_time_band: selectedTimeBand,
+      mapped_departure_time: departureTime,
+      screen: 'home',
+    });
     onNext({
       region:             dbRegion,
       displayRegion:      region,
+      intended_city:      region,
+      query_region_1:     dbRegion,
+      display_region:     region,
       departure_time:     departureTime,
+      departure_time_user_selected: departureTimeUserSelected,
+      selected_time_band: selectedTimeBand,
+      mapped_departure_time: departureTime,
+      time_band_night_friendly: isNightFriendlyAnchor(selectedAnchor, selectedTimeBand),
+      night_friendly_mode: isNightFriendlyAnchor(selectedAnchor, selectedTimeBand),
+      euljiro_mood_label_applied: selectedAnchor.zone_id === 'seoul_euljiro_night',
+      euljiro_night_mode_removed: !!selectedAnchor.suppress_night_friendly,
       region_travel_type: 'urban',
       start_lat:          selectedAnchor.center_lat,
       start_lon:          selectedAnchor.center_lon,
-      start_anchor:       selectedAnchor.name,
+      start_anchor:       selectedAnchor.selected_anchor ?? selectedAnchor.name,
+      start_anchor_label: selectedAnchor.name,
       zone_id:            selectedAnchor.zone_id ?? null,
+      selectedAnchor:     selectedAnchor.selected_anchor ?? selectedAnchor.name,
+      selected_anchor_vibe: selectedAnchor.selected_anchor ?? selectedAnchor.name,
+      anchor_theme_seed:  selectedAnchor.theme_seed ?? null,
+      anchor_district:    selectedAnchor.district ?? null,
+      is_curated_vibe_anchor: isSeoulCuratedAnchor(selectedAnchor),
+      condition_options_collapsed: isSeoulCuratedAnchor(selectedAnchor),
+      default_preset_mode: courseParams?.default_preset_mode !== false,
       _homeAnchor:        selectedAnchor,
     });
   }
 
   const anchorDisplayName = selectedAnchor ? selectedAnchor.name : null;
+  const currentHero = HERO_SLIDES[heroSlideIndex] || HERO_SLIDES[0];
+  const heroImage = currentHero?.image || HERO_FALLBACK_IMAGE;
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: '#FFFFFF', position: 'relative', overflow: 'visible' }}>
@@ -215,9 +372,10 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
       {/* 히어로 영역 */}
       <div style={{ position: 'relative', height: 'clamp(190px, 28dvh, 260px)', flexShrink: 0, overflow: 'hidden' }}>
         <img
-          src={getHeroImage(region)}
+          key={currentHero?.key || 'city'}
+          src={heroImage}
           alt="hero"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '58% center' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: '58% center', transition: 'opacity 420ms ease' }}
         />
         <div style={{
           position: 'absolute', inset: 0,
@@ -239,13 +397,93 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
           <InputCard icon={<PinIcon />} value={region} onTap={() => setRegionSheet(true)} />
         </div>
 
-        <div style={{ marginBottom: 14 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8, marginLeft: 4 }}>오늘 코스, 몇 시에 시작할까요?</p>
-          <InputCard icon={<ClockIcon />} value={departureTime} placeholder="출발 시간을 선택해주세요" onTap={() => setTimeSheet(true)} />
+        <div style={{ marginBottom: 10 }}>
+          <div style={{
+            border: '1px solid #E2E8F0',
+            borderRadius: 16,
+            background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FBFF 100%)',
+            padding: timeBandExpanded ? 12 : 0,
+            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+            overflow: 'hidden',
+          }}>
+            <button
+              type="button"
+              onClick={() => setTimeBandExpanded((value) => !value)}
+              aria-expanded={timeBandExpanded}
+              style={{
+                width: '100%',
+                minHeight: 56,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: timeBandExpanded ? '0 2px 10px' : '0 14px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 16, lineHeight: 1.2, fontWeight: 900, color: '#111827' }}>
+                  출발 시간대 · {getTimeBandOption(selectedTimeBand).label}
+                </span>
+              </div>
+              <span style={{
+                width: 28,
+                height: 28,
+                borderRadius: 999,
+                background: '#EFF6FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                transform: timeBandExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transition: 'transform 160ms ease',
+              }}>
+                <Chevron color="#2563EB" size={16} />
+              </span>
+            </button>
+            {timeBandExpanded && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+                {TIME_BAND_OPTIONS.map((option) => {
+                  const active = selectedTimeBand === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handleTimeBandSelect(option.id)}
+                      aria-pressed={active}
+                      style={{
+                        minWidth: 0,
+                        height: 54,
+                        borderRadius: 14,
+                        border: active ? '1.5px solid #2563EB' : '1px solid #E5E7EB',
+                        background: active ? '#2563EB' : '#FFFFFF',
+                        color: active ? '#FFFFFF' : '#334155',
+                        cursor: 'pointer',
+                        boxShadow: active ? '0 8px 18px rgba(37,99,235,0.18)' : '0 1px 2px rgba(15,23,42,0.04)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 3,
+                      }}
+                    >
+                      <span style={{ fontSize: 15, lineHeight: 1, fontWeight: 900 }}>{option.label}</span>
+                      <span style={{ fontSize: 11, lineHeight: 1.1, fontWeight: 800, color: active ? 'rgba(255,255,255,0.84)' : '#94A3B8' }}>
+                        {option.time}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div style={{ marginBottom: 18 }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8, marginLeft: 4 }}>어느 지역 주변을 돌까요?</p>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 8, marginLeft: 4 }}>어떤 여행지를 선택할까요?</p>
           <button
             onClick={openDeptSheet}
             style={{
@@ -263,22 +501,32 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
               <GreyFlagIcon />
             </div>
             <span style={{ flex: 1, fontSize: 16, fontWeight: 800, color: selectedAnchor ? '#111827' : '#94A3B8' }}>
-              {anchorDisplayName ?? '출발 기준점을 선택해주세요'}
+              {anchorDisplayName ?? '여행지를 선택해주세요'}
             </span>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#2563EB', flexShrink: 0 }}>변경</span>
           </button>
         </div>
 
-        <div style={{ padding: '0 4px' }}>
-          <button onClick={handleNext} disabled={!canGenerate} style={{
-            width: '100%', height: 58, borderRadius: 100,
-            background: canGenerate ? '#2563EB' : '#CBD5E1',
-            color: '#fff', fontSize: 18, fontWeight: 800,
-            boxShadow: canGenerate ? '0 8px 20px rgba(37,99,235,0.25)' : 'none',
-            border: 'none', cursor: canGenerate ? 'pointer' : 'not-allowed',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 0
+        <div style={{
+          marginTop: 2,
+          padding: '10px 4px calc(2px + env(safe-area-inset-bottom, 0px))',
+          borderRadius: 22,
+          background: canGenerate ? 'linear-gradient(180deg, rgba(239,246,255,0.88) 0%, rgba(255,255,255,0) 100%)' : 'transparent',
+        }}>
+          <button onClick={handleNext} disabled={!canGenerate || isGenerating} aria-busy={isGenerating} style={{
+            width: '100%', minHeight: 62, borderRadius: 999,
+            background: canGenerate ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : '#CBD5E1',
+            color: '#fff', fontSize: 17, fontWeight: 900,
+            boxShadow: canGenerate ? '0 12px 26px rgba(37,99,235,0.30), 0 2px 0 rgba(255,255,255,0.18) inset' : 'none',
+            border: canGenerate ? '1px solid rgba(255,255,255,0.22)' : 'none',
+            cursor: canGenerate && !isGenerating ? 'pointer' : 'not-allowed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            marginBottom: 0,
+            letterSpacing: 0,
+            transition: 'box-shadow 160ms ease, transform 160ms ease, background 160ms ease',
+            opacity: isGenerating ? 0.92 : 1,
           }}>
-            코스 만들기
+            {isGenerating ? '코스 준비 중' : '코스 만들기'}
           </button>
         </div>
 
@@ -403,16 +651,16 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
         </div>
       </BottomSheet>
 
-      {/* 출발 기준점 선택 바텀시트 — 모든 지역 통합 */}
+      {/* 여행지 선택 바텀시트 — 모든 지역 통합 */}
       <BottomSheet
         open={deptSheet}
         onClose={() => setDeptSheet(false)}
-        title="출발 기준점 선택"
+        title="여행지 선택"
       >
         <div className="hide-scrollbar" style={{ maxHeight: '70dvh', overflowY: 'auto', padding: '0 20px 30px', display: 'flex', flexDirection: 'column' }}>
 
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 12 }}>추천 출발 기준점</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 10, marginLeft: 2 }}>추천 여행지</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 22 }}>
             {departuresLoading ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0', gap: 8 }}>
                 <style>{`@keyframes spin2 { to { transform: rotate(360deg); } }`}</style>
@@ -420,39 +668,102 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
                 <span style={{ fontSize: 13, color: '#94A3B8' }}>불러오는 중...</span>
               </div>
             ) : departures.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#CBD5E1', textAlign: 'center', padding: '12px 0' }}>출발 기준점 후보가 없어요</p>
+              <p style={{ fontSize: 13, color: '#CBD5E1', textAlign: 'center', padding: '12px 0' }}>여행지 후보가 없어요</p>
             ) : (
-              departures.map((item) => (
+              departures.map((item) => {
+                const isSelected = selectedAnchor?.zone_id === item.zone_id;
+                return (
                 <button
                   key={item.zone_id}
                   onClick={() => {
+                    trackEvent('departure_selected', {
+                      region: dbRegion,
+                      display_region: region,
+                      selected_anchor: item.selected_anchor ?? item.name,
+                      departure_anchor: item.name,
+                      anchor_district: item.district ?? null,
+                      vibe: item.selected_anchor ?? item.name,
+                      theme: item.theme_seed ?? null,
+                      screen: 'home',
+                    });
                     setSelectedAnchor(item);
                     setDeptSheet(false);
-                    onParamChange('start_anchor', item.name);
+                    onParamChange('start_anchor', item.selected_anchor ?? item.name);
+                    onParamChange('start_anchor_label', item.name);
                     onParamChange('start_lat', item.center_lat);
                     onParamChange('start_lon', item.center_lon);
                     onParamChange('zone_id', item.zone_id ?? null);
+                    onParamChange('selected_anchor_vibe', item.selected_anchor ?? item.name);
+                    onParamChange('anchor_theme_seed', item.theme_seed ?? null);
+                    onParamChange('anchor_district', item.district ?? null);
+                    onParamChange('is_curated_vibe_anchor', isSeoulCuratedAnchor(item));
+                    onParamChange('condition_options_collapsed', isSeoulCuratedAnchor(item));
+                    onParamChange('default_preset_mode', true);
+                    onParamChange('time_band_night_friendly', isNightFriendlyAnchor(item, selectedTimeBand));
+                    onParamChange('night_friendly_mode', isNightFriendlyAnchor(item, selectedTimeBand));
+                    onParamChange('euljiro_mood_label_applied', item.zone_id === 'seoul_euljiro_night');
+                    onParamChange('euljiro_night_mode_removed', !!item.suppress_night_friendly);
+                    const seededMood = moodFromAnchorSeed(item);
+                    if (seededMood) {
+                      onParamChange('mood', seededMood);
+                      onParamChange('mood_seeded_by_anchor', true);
+                    } else {
+                      onParamChange('mood_seeded_by_anchor', false);
+                    }
                     onParamChange('_homeAnchor', item);
                   }}
+                  aria-pressed={isSelected}
                   style={{
-                    display: 'flex', alignItems: 'center', padding: '14px 16px',
-                    background: selectedAnchor?.zone_id === item.zone_id ? '#EFF6FF' : '#FFFFFF',
-                    borderRadius: 14,
-                    border: selectedAnchor?.zone_id === item.zone_id ? '1.5px solid #2563EB' : '1px solid #F1F5F9',
-                    gap: 12, cursor: 'pointer', textAlign: 'left'
+                    position: 'relative',
+                    minHeight: 66,
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '12px 14px',
+                    background: isSelected ? 'linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 100%)' : '#FFFFFF',
+                    borderRadius: 16,
+                    border: isSelected ? '1.5px solid #2563EB' : '1px solid #EEF2F7',
+                    boxShadow: isSelected ? '0 8px 20px rgba(37,99,235,0.10)' : '0 2px 10px rgba(15,23,42,0.035)',
+                    gap: 11,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    overflow: 'hidden',
                   }}
                 >
+                  {isSelected && (
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 12,
+                        bottom: 12,
+                        width: 3,
+                        borderRadius: '0 999px 999px 0',
+                        background: '#2563EB',
+                      }}
+                    />
+                  )}
                   <div style={{
-                    width: 36, height: 36, borderRadius: 10,
-                    background: selectedAnchor?.zone_id === item.zone_id ? '#DBEAFE' : '#F1F5F9',
+                    width: 34, height: 34, borderRadius: 11,
+                    background: isSelected ? '#DBEAFE' : '#F8FAFC',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                   }}>
                     <PinIcon />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#1F2937' }}>{item.name}</p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, fontSize: 15, lineHeight: 1.2, fontWeight: 800, color: '#1F2937', wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{item.name}</p>
+                    {(item.vibe_label || item.district) && (
+                      <p style={{ margin: '3px 0 0', fontSize: 12, fontWeight: 600, color: '#64748B', lineHeight: 1.32, wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+                        {[item.district, item.vibe_label].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    {moodFromAnchorSeed(item) && (
+                      <p style={{ margin: '3px 0 0', fontSize: 11, lineHeight: 1.25, fontWeight: 700, color: isSelected ? '#1D4ED8' : '#64748B', wordBreak: 'keep-all' }}>
+                        기본 분위기 · {moodFromAnchorSeed(item)}
+                      </p>
+                    )}
                     {(item.tourist_count != null || item.meal_count != null) && (
-                      <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94A3B8' }}>
+                      <p style={{ margin: '2px 0 0', fontSize: 11, lineHeight: 1.25, color: '#94A3B8', wordBreak: 'keep-all' }}>
                         {[
                           item.tourist_count != null && `관광지 ${item.tourist_count}개`,
                           item.meal_count    != null && `식당 ${item.meal_count}개`,
@@ -461,13 +772,14 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
                       </p>
                     )}
                   </div>
-                  {selectedAnchor?.zone_id === item.zone_id && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  {isSelected && (
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
                       <path d="M5 12l5 5L20 7" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round"/>
                     </svg>
                   )}
                 </button>
-              ))
+                );
+              })
             )}
           </div>
 
@@ -476,8 +788,10 @@ export default function HomeScreen({ onNext, courseParams, onParamChange }) {
               <span style={{ color: '#FFF', fontSize: 10, fontWeight: 900 }}>i</span>
             </div>
             <div>
-              <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#1F2937' }}>출발 기준점 안내</p>
-              <p style={{ margin: 0, fontSize: 12, color: '#64748B', lineHeight: 1.4 }}>선택한 기준점 주변에서 당일치기 코스를 구성합니다.</p>
+              <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700, color: '#1F2937' }}>여행지 선택 안내</p>
+              <p style={{ margin: 0, fontSize: 12, color: '#64748B', lineHeight: 1.45, wordBreak: 'keep-all' }}>
+                대표 관광지와 인기 여행 흐름을 중심으로 추천해드려요
+              </p>
             </div>
           </div>
         </div>
