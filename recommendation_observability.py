@@ -115,6 +115,113 @@ def summarize_support_slot_roles(selected_places: list[dict[str, Any]] | None) -
         "support_slot_role_balance_score": balance_score,
     }
 
+
+def _gangnam_support_tag(place: dict[str, Any] | None) -> str:
+    """Classify Gangnam support-slot editorial fit for trace only."""
+    if not isinstance(place, dict):
+        return "other"
+    text = " ".join(
+        str(place.get(key) or "")
+        for key in (
+            "visit_role",
+            "role",
+            "category",
+            "category_name",
+            "place_name",
+            "name",
+            "description",
+        )
+    ).lower()
+    normalized = _normalize(text)
+    checks = (
+        ("coex_family", ("\ucf54\uc5d1\uc2a4", "coex", "\ubcc4\ub9c8\ub2f9", "starfield", "\uc2a4\ud0c0\ud544\ub4dc")),
+        ("garosugil_walk", ("\uac00\ub85c\uc218\uae38", "\uc2e0\uc0ac\ub3d9", "\ub85c\ub370\uc624\uac70\ub9ac")),
+        ("apgujeong_cheongdam_lifestyle", ("\uc555\uad6c\uc815", "\uccad\ub2f4", "\ud328\uc158", "\uac24\ub7ec\ub9ac", "\ud3b8\uc9d1\uc20d")),
+        ("bongeunsa_heritage", ("\ubd09\uc740\uc0ac", "\uc120\uc815\ub989", "\uc120\ub989", "\uc815\ub989", "\uc720\ub124\uc2a4\ucf54")),
+        ("weak_public_training", ("\uad6d\uae30\uc6d0", "\uad6d\uac00\ubb34\ud615\uc720\uc0b0\uc804\uc218\uad50\uc721\uad00", "\uc804\uc218\uad50\uc721\uad00", "\ud0dc\uad8c\ub3c4")),
+        ("weak_indoor_education", ("\ud55c\uc0dd\uc5f0", "\uc2e4\ud5d8\ub204\ub9ac", "\uacfc\ud559\uad00", "\uad50\uc721", "\ub3c4\uc11c\uad00")),
+        ("weak_culture_hall", ("\uc288\ud53c\uac90\ud640", "\ud640", "\ubb38\ud654\ub9c8\ub8e8", "\ud68c\uad00")),
+        ("weak_lifestyle", ("\ubc18\ub824\ubb38\ud654",)),
+        ("weak_generic_meal", ("\uc9c4\uc218\uc0ac", "\ucf74\uc548\ub2e4\uc624", "\uc54c\ub77c\ud504\ub9ac\ub9c8", "\ud1a0\ub9d0", "\uacf1\ucc3d")),
+    )
+    for tag, terms in checks:
+        if any(term in text or _normalize(term) in normalized for term in terms):
+            return tag
+    role = str(place.get("visit_role") or "").strip().lower()
+    if role == "meal":
+        return "weak_generic_meal"
+    if role == "cafe":
+        return "curated_cafe_walk_support"
+    if _classify_support_role(place) == "walk":
+        return "curated_cafe_walk_support"
+    return "other"
+
+
+def summarize_gangnam_editorial_support(
+    selected_places: list[dict[str, Any]] | None,
+    selected_anchor_raw: Any,
+) -> dict[str, Any]:
+    """Expose Gangnam support-slot editorial quality signals without scoring."""
+    anchor_text = _normalize(selected_anchor_raw)
+    if not any(term in anchor_text for term in (_normalize("\uac15\ub0a8"), _normalize("\ucf54\uc5d1\uc2a4"), _normalize("\uac00\ub85c\uc218\uae38"), _normalize("\uc555\uad6c\uc815"), _normalize("\uccad\ub2f4"))):
+        return {
+            "gangnam_editorial_support_fit": None,
+            "gangnam_weak_public_support_risk": None,
+            "gangnam_repeated_generic_meal_support": None,
+            "gangnam_support_candidate_tags": [],
+        }
+
+    places = [p for p in (selected_places or []) if isinstance(p, dict)]
+    support_places = places[1:] if len(places) > 1 else []
+    positive_tags = {
+        "coex_family",
+        "garosugil_walk",
+        "apgujeong_cheongdam_lifestyle",
+        "bongeunsa_heritage",
+        "curated_cafe_walk_support",
+    }
+    weak_public_tags = {"weak_public_training", "weak_indoor_education", "weak_culture_hall", "weak_lifestyle"}
+    tag_rows: list[dict[str, Any]] = []
+    for index, place in enumerate(support_places, start=1):
+        tag = _gangnam_support_tag(place)
+        tag_rows.append({
+            "support_index": index,
+            "place_name": place.get("place_name") or place.get("name"),
+            "visit_role": place.get("visit_role"),
+            "tag": tag,
+            "positive_fit": tag in positive_tags,
+            "weak_public_risk": tag in weak_public_tags,
+            "generic_meal_risk": tag == "weak_generic_meal",
+        })
+
+    support_count = len(tag_rows)
+    positive_count = sum(1 for row in tag_rows if row["positive_fit"])
+    weak_public_rows = [row for row in tag_rows if row["weak_public_risk"]]
+    generic_meal_rows = [row for row in tag_rows if row["generic_meal_risk"]]
+    repeated_meal_names = [
+        name for name, count in Counter(row["place_name"] for row in generic_meal_rows).items()
+        if name and count >= 1
+    ]
+
+    return {
+        "gangnam_editorial_support_fit": {
+            "support_count": support_count,
+            "positive_fit_count": positive_count,
+            "fit_ratio": round(positive_count / support_count, 4) if support_count else None,
+        },
+        "gangnam_weak_public_support_risk": {
+            "count": len(weak_public_rows),
+            "candidates": weak_public_rows,
+        },
+        "gangnam_repeated_generic_meal_support": {
+            "count": len(generic_meal_rows),
+            "candidates": generic_meal_rows,
+            "candidate_names": repeated_meal_names,
+        },
+        "gangnam_support_candidate_tags": tag_rows,
+    }
+
+
 def infer_city_token(place: dict[str, Any] | None) -> str:
     """Infer a coarse city token from place metadata for QA/trace only."""
     if not isinstance(place, dict):
@@ -566,6 +673,7 @@ def build_recommendation_trace(
     route_coherence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     support_role_trace = summarize_support_slot_roles(selected_places)
+    gangnam_support_trace = summarize_gangnam_editorial_support(selected_places, selected_anchor_raw)
     return {
         "request_id": request_id,
         "region": region,
@@ -576,6 +684,7 @@ def build_recommendation_trace(
         "top_candidate_city_distribution": top_candidate_city_distribution or {},
         "selected_places": selected_places,
         **support_role_trace,
+        **gangnam_support_trace,
         "rejected_candidates_count": int(rejected_candidates_count or 0),
         "wrong_city_demote_applied_count": int(wrong_city_demote_applied_count or 0),
         "locality_bonus_applied_count": int(locality_bonus_applied_count or 0),
