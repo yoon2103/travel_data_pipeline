@@ -553,6 +553,149 @@ def summarize_scored_candidates(scored_candidates: list[Any], limit: int = 8) ->
     return rows
 
 
+def summarize_gangnam_support_slot_assembly(
+    *,
+    slot_name: str,
+    role_required: Any,
+    scored_candidates: list[Any] | None,
+    selection_pool_candidates: list[Any] | None,
+    selected_place: dict[str, Any] | None,
+    selected_components: dict[str, Any] | None,
+    selected_reason: str | None,
+    selected_pool: str | None,
+    selected_anchor_family_id: str | None,
+    fallback_info: dict[str, Any] | None = None,
+    initial_selected_place: dict[str, Any] | None = None,
+    limit: int = 8,
+) -> dict[str, Any] | None:
+    """Summarize Gangnam support-slot assembly ordering for observability only.
+
+    This helper only reports already-computed candidate order and selection
+    context. It must not be used to score, filter, or replace candidates.
+    """
+    if selected_anchor_family_id != "seoul_gangnam":
+        return None
+
+    selected_place = selected_place or {}
+    selected_components = selected_components or {}
+    selected_id = selected_place.get("place_id")
+    initial_selected_place = initial_selected_place or selected_place
+    initial_selected_id = initial_selected_place.get("place_id")
+
+    def _candidate_row(item: Any, rank: int, *, from_pool: str) -> dict[str, Any] | None:
+        if not isinstance(item, tuple) or len(item) < 5:
+            return None
+        score, travel_min, dist_km, components, place = item
+        components = components or {}
+        place = place or {}
+        place_id = place.get("place_id")
+        tag = _gangnam_support_tag(place)
+        is_selected = place_id == selected_id
+        is_initial_selected = place_id == initial_selected_id
+        representative_boost = float(components.get("gangnam_representative_support_boost") or 0.0)
+        weak_demote = float(components.get("gangnam_editorial_soft_demote_delta") or 0.0)
+        family_alignment = max(
+            float(components.get("support_slot_family_alignment") or 0.0),
+            float(components.get("representative_support_slot_alignment") or 0.0),
+            float(components.get("selected_anchor_family_match_score") or 0.0),
+            float(components.get("gangnam_family_score") or 0.0),
+        )
+        if is_selected:
+            rejected_reason = None
+        elif representative_boost > 0:
+            rejected_reason = "representative_support_not_selected"
+        elif weak_demote > 0:
+            rejected_reason = "weak_public_support_soft_demoted_but_available"
+        elif rank <= 3:
+            rejected_reason = "weighted_choice_not_drawn"
+        else:
+            rejected_reason = "ranked_below_weighted_pool"
+
+        return {
+            "rank": rank,
+            "place_id": place_id,
+            "place_name": place.get("place_name") or place.get("name"),
+            "visit_role": place.get("visit_role"),
+            "category": place.get("category"),
+            "category_name": place.get("category_name"),
+            "candidate_score": round(float(components.get("final_score") or score or 0.0), 4),
+            "travel_min": travel_min,
+            "distance_km": round(float(dist_km or 0.0), 3),
+            "selection_pool": from_pool,
+            "selected": is_selected,
+            "initial_selected": is_initial_selected,
+            "support_slot_family_alignment": round(family_alignment, 4),
+            "support_slot_editorial_fit": tag,
+            "gangnam_representative_support_boost": round(representative_boost, 4),
+            "gangnam_editorial_soft_demote_delta": round(weak_demote, 4),
+            "gangnam_editorial_representative_score": components.get("gangnam_editorial_representative_score", 0.0),
+            "gangnam_candidate_depth_score": components.get("gangnam_candidate_depth_score", 0.0),
+            "selected_reason": selected_reason if is_selected else None,
+            "rejected_reason": rejected_reason,
+        }
+
+    candidate_order = [
+        row for row in (
+            _candidate_row(item, rank, from_pool="scored")
+            for rank, item in enumerate((scored_candidates or [])[:limit], start=1)
+        )
+        if row
+    ]
+    weighted_pool_order = [
+        row for row in (
+            _candidate_row(item, rank, from_pool=selected_pool or "weighted")
+            for rank, item in enumerate((selection_pool_candidates or [])[:limit], start=1)
+        )
+        if row
+    ]
+    selected_row = next((row for row in candidate_order if row.get("selected")), None)
+    if not selected_row:
+        selected_row = _candidate_row(
+            (
+                selected_components.get("final_score", 0.0),
+                None,
+                0.0,
+                selected_components,
+                selected_place,
+            ),
+            0,
+            from_pool="selected_after_replacement",
+        )
+
+    return {
+        "slot": slot_name,
+        "role_required": role_required,
+        "selected_pool": selected_pool,
+        "fallback_reason": (fallback_info or {}).get("reason"),
+        "replacement_applied": bool(initial_selected_id and selected_id and initial_selected_id != selected_id),
+        "initial_selected_place": initial_selected_place.get("name") or initial_selected_place.get("place_name"),
+        "selected_place": selected_place.get("name") or selected_place.get("place_name"),
+        "selected_place_id": selected_id,
+        "support_slot_candidate_order": candidate_order,
+        "support_slot_weighted_pool_order": weighted_pool_order,
+        "support_slot_candidate_score": [
+            {
+                "place_name": row.get("place_name"),
+                "candidate_score": row.get("candidate_score"),
+                "rank": row.get("rank"),
+            }
+            for row in candidate_order
+        ],
+        "support_slot_selected_reason": selected_reason,
+        "support_slot_rejected_reason": [
+            {
+                "place_name": row.get("place_name"),
+                "rank": row.get("rank"),
+                "reason": row.get("rejected_reason"),
+            }
+            for row in candidate_order
+            if not row.get("selected")
+        ],
+        "support_slot_family_alignment": selected_row.get("support_slot_family_alignment") if selected_row else None,
+        "support_slot_editorial_fit": selected_row.get("support_slot_editorial_fit") if selected_row else None,
+    }
+
+
 def summarize_wrong_city_ratio(candidate_summaries: list[dict[str, Any]], target_city: str | None) -> dict[str, Any]:
     """Summarize wrong-city ratio from candidate summaries."""
     if not candidate_summaries or not target_city:
@@ -669,6 +812,7 @@ def build_recommendation_trace(
     district_vibe_reason: dict[str, Any] | None = None,
     route_level_warnings: list[dict[str, Any]] | None = None,
     replacement_events: list[dict[str, Any]] | None = None,
+    support_slot_assembly_ordering_trace: list[dict[str, Any]] | None = None,
     unsuitable_block_counts: dict[str, int] | None = None,
     candidate_samples: list[dict[str, Any]] | None = None,
     region_identity: dict[str, Any] | None = None,
@@ -689,6 +833,46 @@ def build_recommendation_trace(
         "selected_places": selected_places,
         **support_role_trace,
         **gangnam_support_trace,
+        "support_slot_assembly_ordering_trace": support_slot_assembly_ordering_trace or [],
+        "support_slot_candidate_order": support_slot_assembly_ordering_trace or [],
+        "support_slot_candidate_score": [
+            {
+                "slot": event.get("slot"),
+                "candidate_score": event.get("support_slot_candidate_score") or [],
+            }
+            for event in (support_slot_assembly_ordering_trace or [])
+        ],
+        "support_slot_selected_reason": [
+            {
+                "slot": event.get("slot"),
+                "selected_place": event.get("selected_place"),
+                "reason": event.get("support_slot_selected_reason"),
+            }
+            for event in (support_slot_assembly_ordering_trace or [])
+        ],
+        "support_slot_rejected_reason": [
+            {
+                "slot": event.get("slot"),
+                "rejected": event.get("support_slot_rejected_reason") or [],
+            }
+            for event in (support_slot_assembly_ordering_trace or [])
+        ],
+        "support_slot_family_alignment": [
+            {
+                "slot": event.get("slot"),
+                "selected_place": event.get("selected_place"),
+                "alignment": event.get("support_slot_family_alignment"),
+            }
+            for event in (support_slot_assembly_ordering_trace or [])
+        ],
+        "support_slot_editorial_fit": [
+            {
+                "slot": event.get("slot"),
+                "selected_place": event.get("selected_place"),
+                "fit": event.get("support_slot_editorial_fit"),
+            }
+            for event in (support_slot_assembly_ordering_trace or [])
+        ],
         "rejected_candidates_count": int(rejected_candidates_count or 0),
         "wrong_city_demote_applied_count": int(wrong_city_demote_applied_count or 0),
         "locality_bonus_applied_count": int(locality_bonus_applied_count or 0),

@@ -33,6 +33,7 @@ from region_identity_layer import (
 )
 from recommendation_observability import (
     build_recommendation_trace,
+    summarize_gangnam_support_slot_assembly,
     summarize_city_distribution,
     summarize_scored_candidates,
     infer_city_token,
@@ -6750,6 +6751,7 @@ def build_course(conn, request: dict) -> dict:
     trace_gangnam_editorial_soft_demote_delta = 0.0
     trace_gangnam_representative_support_boost_count = 0
     trace_gangnam_representative_support_boost_total = 0.0
+    trace_support_slot_assembly_ordering: list[dict] = []
     trace_route_contamination_count = 0
     trace_cross_flow_candidate_count = 0
     trace_lifestyle_mismatch_count = 0
@@ -8809,6 +8811,8 @@ def build_course(conn, request: dict) -> dict:
                     tier2_scored = [item for item in tier2_scored if item[4]["place_id"] not in closed_ids]
 
         # ── Req 1: Tier 기반 가중치 선택 (이동 시간 페널티 포함, 확정 픽 없음) ──────
+        selection_pool_name = "scored"
+        selection_pool_candidates = scored
         if tier1_scored and not fallback_info:
             tier1_scored.sort(
                 key=lambda x: (
@@ -8841,6 +8845,8 @@ def build_course(conn, request: dict) -> dict:
                 ]
                 if _coherent:
                     _candidate_t1 = _coherent
+            selection_pool_name = "tier1"
+            selection_pool_candidates = _candidate_t1
             _, travel_min, dist_km, components, chosen = _weighted_choice_tiered(
                 _candidate_t1, TIER1_WEIGHTED_TOP_K, eff_max_travel
             )
@@ -8849,6 +8855,7 @@ def build_course(conn, request: dict) -> dict:
             _, travel_min, dist_km, components, chosen = _weighted_choice_tiered(
                 scored, DIVERSITY_TOP_K, eff_max_travel
             )
+        initial_chosen = chosen
 
         # 선택된 장소의 벨트 부스트 추적
         _, travel_min, dist_km, components, chosen = _maybe_replace_with_exact_support_landmark(
@@ -8881,13 +8888,29 @@ def build_course(conn, request: dict) -> dict:
             continue
 
         fb = fallback_info or {"triggered": False, "reason": None}
+        selection_reason = _build_reason(slot, chosen["visit_role"], components, fb if fb["triggered"] else None)
+        assembly_trace = summarize_gangnam_support_slot_assembly(
+            slot_name=slot,
+            role_required=role,
+            scored_candidates=scored,
+            selection_pool_candidates=selection_pool_candidates,
+            selected_place=chosen,
+            selected_components=components,
+            selected_reason=selection_reason,
+            selected_pool=selection_pool_name,
+            selected_anchor_family_id=str((selected_anchor_family or {}).get("family_id") or ""),
+            fallback_info=fb,
+            initial_selected_place=initial_chosen,
+        )
+        if assembly_trace:
+            trace_support_slot_assembly_ordering.append(assembly_trace)
         chosen["_fallback_reason"]  = fb["reason"]
         chosen["_selection_basis"]  = {
             "version":     "1.0",
             "selected_by": "engine",
             "weights":     weights,
             "scores":      components,
-            "reason":      _build_reason(slot, chosen["visit_role"], components, fb if fb["triggered"] else None),
+            "reason":      selection_reason,
             "evidence": {
                 "travel_minutes_from_prev": travel_min,
                 "distance_km_from_prev":    round(dist_km, 3),
@@ -9108,6 +9131,46 @@ def build_course(conn, request: dict) -> dict:
         "gangnam_representative_support_boost_applied": bool(trace_gangnam_representative_support_boost_count),
         "gangnam_representative_support_boost_count": trace_gangnam_representative_support_boost_count,
         "gangnam_representative_support_boost": round(trace_gangnam_representative_support_boost_total, 4),
+        "support_slot_assembly_ordering_trace": trace_support_slot_assembly_ordering,
+        "support_slot_candidate_order": trace_support_slot_assembly_ordering,
+        "support_slot_candidate_score": [
+            {
+                "slot": event.get("slot"),
+                "candidate_score": event.get("support_slot_candidate_score") or [],
+            }
+            for event in trace_support_slot_assembly_ordering
+        ],
+        "support_slot_selected_reason": [
+            {
+                "slot": event.get("slot"),
+                "selected_place": event.get("selected_place"),
+                "reason": event.get("support_slot_selected_reason"),
+            }
+            for event in trace_support_slot_assembly_ordering
+        ],
+        "support_slot_rejected_reason": [
+            {
+                "slot": event.get("slot"),
+                "rejected": event.get("support_slot_rejected_reason") or [],
+            }
+            for event in trace_support_slot_assembly_ordering
+        ],
+        "support_slot_family_alignment": [
+            {
+                "slot": event.get("slot"),
+                "selected_place": event.get("selected_place"),
+                "alignment": event.get("support_slot_family_alignment"),
+            }
+            for event in trace_support_slot_assembly_ordering
+        ],
+        "support_slot_editorial_fit": [
+            {
+                "slot": event.get("slot"),
+                "selected_place": event.get("selected_place"),
+                "fit": event.get("support_slot_editorial_fit"),
+            }
+            for event in trace_support_slot_assembly_ordering
+        ],
         "euljiro_mood_label_applied": bool(request.get("euljiro_mood_label_applied")),
         "euljiro_night_mode_removed": bool(request.get("euljiro_night_mode_removed")),
         "night_friendly_time_policy": request.get("night_friendly_time_policy") if isinstance(request, dict) else None,
@@ -9208,6 +9271,7 @@ def build_course(conn, request: dict) -> dict:
             gangnam_editorial_soft_demote_delta=trace_gangnam_editorial_soft_demote_delta,
             gangnam_representative_support_boost_applied_count=trace_gangnam_representative_support_boost_count,
             gangnam_representative_support_boost=trace_gangnam_representative_support_boost_total,
+            support_slot_assembly_ordering_trace=trace_support_slot_assembly_ordering,
             euljiro_mood_label_applied=bool(request.get("euljiro_mood_label_applied")),
             euljiro_night_mode_removed=bool(request.get("euljiro_night_mode_removed")),
             default_preset_mode=default_preset_mode,
