@@ -1003,6 +1003,44 @@ def _is_meal_semantic_candidate(place: dict | None) -> bool:
     return False
 
 
+def _gangnam_editorial_weak_support_delta(
+    place: dict | None,
+    selected_anchor_family: dict | None,
+    target_slot: str | None,
+    previous_place: dict | None = None,
+) -> tuple[float, str | None]:
+    """Return a tiny Gangnam-only editorial support demote.
+
+    This is intentionally narrow: support-slot only, no hard exclusion, no
+    replacement, and no global public-facility policy. It only nudges repeated
+    weak public/culture support candidates when a better scored alternative
+    already exists.
+    """
+    if not isinstance(place, dict):
+        return 0.0, None
+    if str((selected_anchor_family or {}).get("family_id") or "") != "seoul_gangnam":
+        return 0.0, None
+    if not isinstance(previous_place, dict) or str(target_slot or "") == "anchor":
+        return 0.0, None
+
+    text = _normalize_city_token(" ".join(str(place.get(key) or "") for key in (
+        "name", "place_name", "category", "category_name", "description", "overview"
+    )))
+    weak_terms = (
+        "국가무형유산전수교육관",
+        "전수교육관",
+        "국기원",
+        "태권도본부",
+        "슈피겐홀",
+        "한생연",
+        "실험누리과학관",
+    )
+    matched = [term for term in weak_terms if _normalize_city_token(term) in text]
+    if not matched:
+        return 0.0, None
+    return 0.028, ",".join(matched[:2])
+
+
 def _build_city_alias_set(intended_city: str | None) -> set[str]:
     base = _normalize_city_token(intended_city)
     if not base:
@@ -4121,6 +4159,12 @@ def _score(
     ):
         same_role_soft_demote_role = "meal"
         same_role_soft_demote_delta = 0.018
+    gangnam_editorial_soft_demote_delta, gangnam_editorial_soft_demote_reason = _gangnam_editorial_weak_support_delta(
+        place,
+        selected_anchor_family,
+        target_slot,
+        previous_place,
+    )
     w = weights or WEIGHTS_DEFAULT
     score = (
         w["travel_fit"]           * distance_score
@@ -4229,6 +4273,7 @@ def _score(
         - indoor_night_confidence_demote
         - night_indoor_strong_demote
         - same_role_soft_demote_delta
+        - gangnam_editorial_soft_demote_delta
     )
 
     components = {
@@ -4281,6 +4326,9 @@ def _score(
         "same_role_soft_demote_applied": bool(same_role_soft_demote_delta > 0),
         "same_role_soft_demote_role": same_role_soft_demote_role,
         "same_role_soft_demote_delta": round(same_role_soft_demote_delta, 4),
+        "gangnam_editorial_soft_demote_applied": bool(gangnam_editorial_soft_demote_delta > 0),
+        "gangnam_editorial_soft_demote_delta": round(gangnam_editorial_soft_demote_delta, 4),
+        "gangnam_editorial_soft_demote_reason": gangnam_editorial_soft_demote_reason,
         "route_contamination_demote": round(route_contamination_demote, 4),
         "route_contamination_flags": route_contamination_signal.get("route_contamination_flags") or [],
         "route_contamination_reasons": route_contamination_signal.get("route_contamination_reasons") or [],
@@ -6644,6 +6692,8 @@ def build_course(conn, request: dict) -> dict:
     trace_meal_cafe_soft_demote_count = 0
     trace_same_role_soft_demote_count = 0
     trace_same_role_soft_demote_delta = 0.0
+    trace_gangnam_editorial_soft_demote_count = 0
+    trace_gangnam_editorial_soft_demote_delta = 0.0
     trace_route_contamination_count = 0
     trace_cross_flow_candidate_count = 0
     trace_lifestyle_mismatch_count = 0
@@ -8489,6 +8539,14 @@ def build_course(conn, request: dict) -> dict:
             for item in scored
             if item[3].get("same_role_soft_demote_applied")
         )
+        trace_gangnam_editorial_soft_demote_count += sum(
+            1 for item in scored if item[3].get("gangnam_editorial_soft_demote_applied")
+        )
+        trace_gangnam_editorial_soft_demote_delta += sum(
+            float(item[3].get("gangnam_editorial_soft_demote_delta") or 0.0)
+            for item in scored
+            if item[3].get("gangnam_editorial_soft_demote_applied")
+        )
         trace_route_contamination_count += sum(1 for item in scored if item[3].get("route_contamination_demote", 0.0) > 0)
         trace_night_operating_confidence_count += sum(1 for item in scored if item[3].get("night_operating_confidence", 0.0) > 0)
         trace_indoor_night_confidence_demote_count += sum(1 for item in scored if item[3].get("indoor_night_confidence_demote", 0.0) > 0)
@@ -8980,6 +9038,9 @@ def build_course(conn, request: dict) -> dict:
         "same_role_soft_demote_applied": bool(trace_same_role_soft_demote_count),
         "same_role_soft_demote_role": "meal" if trace_same_role_soft_demote_count else None,
         "same_role_soft_demote_delta": round(trace_same_role_soft_demote_delta, 4),
+        "gangnam_editorial_soft_demote_applied": bool(trace_gangnam_editorial_soft_demote_count),
+        "gangnam_editorial_soft_demote_count": trace_gangnam_editorial_soft_demote_count,
+        "gangnam_editorial_soft_demote_delta": round(trace_gangnam_editorial_soft_demote_delta, 4),
         "euljiro_mood_label_applied": bool(request.get("euljiro_mood_label_applied")),
         "euljiro_night_mode_removed": bool(request.get("euljiro_night_mode_removed")),
         "night_friendly_time_policy": request.get("night_friendly_time_policy") if isinstance(request, dict) else None,
@@ -9076,6 +9137,8 @@ def build_course(conn, request: dict) -> dict:
             same_role_soft_demote_applied_count=trace_same_role_soft_demote_count,
             same_role_soft_demote_role="meal" if trace_same_role_soft_demote_count else None,
             same_role_soft_demote_delta=trace_same_role_soft_demote_delta,
+            gangnam_editorial_soft_demote_applied_count=trace_gangnam_editorial_soft_demote_count,
+            gangnam_editorial_soft_demote_delta=trace_gangnam_editorial_soft_demote_delta,
             euljiro_mood_label_applied=bool(request.get("euljiro_mood_label_applied")),
             euljiro_night_mode_removed=bool(request.get("euljiro_night_mode_removed")),
             default_preset_mode=default_preset_mode,
