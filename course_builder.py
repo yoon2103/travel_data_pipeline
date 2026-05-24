@@ -987,6 +987,22 @@ def _normalize_city_token(value: str | None) -> str:
     return re.sub(r"[\\s\\-\\(\\)\\[\\],·/]", "", str(value or "").strip().lower())
 
 
+def _is_meal_semantic_candidate(place: dict | None) -> bool:
+    """Classify only meal-like support candidates for bounded role repetition traces."""
+    if not isinstance(place, dict):
+        return False
+    if str(place.get("visit_role") or "").strip().lower() == "meal":
+        return True
+    text = _normalize_city_token(" ".join(str(place.get(key) or "") for key in (
+        "name", "place_name", "category", "category_name", "description", "overview"
+    )))
+    if any(token in text for token in (
+        "음식점", "식당", "맛집", "레스토랑", "비스트로", "다이닝", "국밥", "해장", "갈비", "냉면",
+    )):
+        return True
+    return False
+
+
 def _build_city_alias_set(intended_city: str | None) -> set[str]:
     base = _normalize_city_token(intended_city)
     if not base:
@@ -4095,6 +4111,16 @@ def _score(
     night_safe_outdoor_priority = float(night_confidence_signal.get("night_safe_outdoor_priority") or 0.0)
     nightlife_suitability_alignment = float(night_confidence_signal.get("nightlife_suitability_alignment") or 0.0)
     night_indoor_strong_demote = float(night_confidence_signal.get("night_indoor_strong_demote") or 0.0)
+    same_role_soft_demote_delta = 0.0
+    same_role_soft_demote_role = None
+    if (
+        previous_place
+        and str((selected_anchor_family or {}).get("family_id") or "") == "seoul_hannam"
+        and _is_meal_semantic_candidate(previous_place)
+        and _is_meal_semantic_candidate(place)
+    ):
+        same_role_soft_demote_role = "meal"
+        same_role_soft_demote_delta = 0.018
     w = weights or WEIGHTS_DEFAULT
     score = (
         w["travel_fit"]           * distance_score
@@ -4202,6 +4228,7 @@ def _score(
         + night_operating_confidence
         - indoor_night_confidence_demote
         - night_indoor_strong_demote
+        - same_role_soft_demote_delta
     )
 
     components = {
@@ -4251,6 +4278,9 @@ def _score(
         "meal_cafe_bonus": round(meal_cafe_bonus, 4),
         "meal_cafe_soft_demote": round(meal_cafe_soft_demote, 4),
         "meal_cafe_match_reasons": meal_cafe_signal.get("meal_cafe_match_reasons") or [],
+        "same_role_soft_demote_applied": bool(same_role_soft_demote_delta > 0),
+        "same_role_soft_demote_role": same_role_soft_demote_role,
+        "same_role_soft_demote_delta": round(same_role_soft_demote_delta, 4),
         "route_contamination_demote": round(route_contamination_demote, 4),
         "route_contamination_flags": route_contamination_signal.get("route_contamination_flags") or [],
         "route_contamination_reasons": route_contamination_signal.get("route_contamination_reasons") or [],
@@ -6612,6 +6642,8 @@ def build_course(conn, request: dict) -> dict:
     trace_suitability_soft_demote_count = 0
     trace_meal_cafe_bonus_count = 0
     trace_meal_cafe_soft_demote_count = 0
+    trace_same_role_soft_demote_count = 0
+    trace_same_role_soft_demote_delta = 0.0
     trace_route_contamination_count = 0
     trace_cross_flow_candidate_count = 0
     trace_lifestyle_mismatch_count = 0
@@ -8451,6 +8483,12 @@ def build_course(conn, request: dict) -> dict:
         trace_suitability_soft_demote_count += sum(1 for item in scored if item[3].get("suitability_soft_demote", 0.0) > 0)
         trace_meal_cafe_bonus_count += sum(1 for item in scored if item[3].get("meal_cafe_bonus", 0.0) > 0)
         trace_meal_cafe_soft_demote_count += sum(1 for item in scored if item[3].get("meal_cafe_soft_demote", 0.0) > 0)
+        trace_same_role_soft_demote_count += sum(1 for item in scored if item[3].get("same_role_soft_demote_applied"))
+        trace_same_role_soft_demote_delta += sum(
+            float(item[3].get("same_role_soft_demote_delta") or 0.0)
+            for item in scored
+            if item[3].get("same_role_soft_demote_applied")
+        )
         trace_route_contamination_count += sum(1 for item in scored if item[3].get("route_contamination_demote", 0.0) > 0)
         trace_night_operating_confidence_count += sum(1 for item in scored if item[3].get("night_operating_confidence", 0.0) > 0)
         trace_indoor_night_confidence_demote_count += sum(1 for item in scored if item[3].get("indoor_night_confidence_demote", 0.0) > 0)
@@ -8939,6 +8977,9 @@ def build_course(conn, request: dict) -> dict:
         "broad_seoul_demoted": trace_broad_seoul_demoted_count,
         "district_identity_alignment": trace_district_identity_alignment_count,
         "support_slot_role_diversity": trace_support_slot_role_diversity_count,
+        "same_role_soft_demote_applied": bool(trace_same_role_soft_demote_count),
+        "same_role_soft_demote_role": "meal" if trace_same_role_soft_demote_count else None,
+        "same_role_soft_demote_delta": round(trace_same_role_soft_demote_delta, 4),
         "euljiro_mood_label_applied": bool(request.get("euljiro_mood_label_applied")),
         "euljiro_night_mode_removed": bool(request.get("euljiro_night_mode_removed")),
         "night_friendly_time_policy": request.get("night_friendly_time_policy") if isinstance(request, dict) else None,
@@ -9032,6 +9073,9 @@ def build_course(conn, request: dict) -> dict:
             broad_seoul_demoted=trace_broad_seoul_demoted_count,
             district_identity_alignment=trace_district_identity_alignment_count,
             support_slot_role_diversity=trace_support_slot_role_diversity_count,
+            same_role_soft_demote_applied_count=trace_same_role_soft_demote_count,
+            same_role_soft_demote_role="meal" if trace_same_role_soft_demote_count else None,
+            same_role_soft_demote_delta=trace_same_role_soft_demote_delta,
             euljiro_mood_label_applied=bool(request.get("euljiro_mood_label_applied")),
             euljiro_night_mode_removed=bool(request.get("euljiro_night_mode_removed")),
             default_preset_mode=default_preset_mode,
