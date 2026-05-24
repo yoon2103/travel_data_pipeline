@@ -1041,6 +1041,50 @@ def _gangnam_editorial_weak_support_delta(
     return 0.028, ",".join(matched[:2])
 
 
+def _gangnam_representative_support_boost(
+    place: dict | None,
+    selected_anchor_family: dict | None,
+    target_slot: str | None,
+    previous_place: dict | None = None,
+) -> tuple[float, str | None]:
+    """Return a tiny Gangnam support-slot representative preference.
+
+    This reinforces better same-family support texture instead of expanding
+    weak-candidate penalties. It is support-slot only and cannot alter
+    first-place selection directly.
+    """
+    if not isinstance(place, dict):
+        return 0.0, None
+    if str((selected_anchor_family or {}).get("family_id") or "") != "seoul_gangnam":
+        return 0.0, None
+    if not isinstance(previous_place, dict) or str(target_slot or "") == "anchor":
+        return 0.0, None
+
+    text = _normalize_city_token(" ".join(str(place.get(key) or "") for key in (
+        "name", "place_name", "category", "category_name", "description", "overview"
+    )))
+    representative_terms = (
+        "코엑스",
+        "별마당",
+        "스타필드",
+        "가로수길",
+        "신사동",
+        "압구정",
+        "로데오",
+        "청담",
+        "봉은사",
+        "선정릉",
+        "선릉",
+        "정릉",
+        "플랫폼엘",
+        "에이비카페",
+    )
+    matched = [term for term in representative_terms if _normalize_city_token(term) in text]
+    if not matched:
+        return 0.0, None
+    return 0.035, ",".join(matched[:3])
+
+
 def _build_city_alias_set(intended_city: str | None) -> set[str]:
     base = _normalize_city_token(intended_city)
     if not base:
@@ -4165,6 +4209,12 @@ def _score(
         target_slot,
         previous_place,
     )
+    gangnam_representative_support_boost, gangnam_representative_support_reason = _gangnam_representative_support_boost(
+        place,
+        selected_anchor_family,
+        target_slot,
+        previous_place,
+    )
     w = weights or WEIGHTS_DEFAULT
     score = (
         w["travel_fit"]           * distance_score
@@ -4274,6 +4324,7 @@ def _score(
         - night_indoor_strong_demote
         - same_role_soft_demote_delta
         - gangnam_editorial_soft_demote_delta
+        + gangnam_representative_support_boost
     )
 
     components = {
@@ -4329,6 +4380,9 @@ def _score(
         "gangnam_editorial_soft_demote_applied": bool(gangnam_editorial_soft_demote_delta > 0),
         "gangnam_editorial_soft_demote_delta": round(gangnam_editorial_soft_demote_delta, 4),
         "gangnam_editorial_soft_demote_reason": gangnam_editorial_soft_demote_reason,
+        "gangnam_representative_support_boost_applied": bool(gangnam_representative_support_boost > 0),
+        "gangnam_representative_support_boost": round(gangnam_representative_support_boost, 4),
+        "gangnam_representative_support_reason": gangnam_representative_support_reason,
         "route_contamination_demote": round(route_contamination_demote, 4),
         "route_contamination_flags": route_contamination_signal.get("route_contamination_flags") or [],
         "route_contamination_reasons": route_contamination_signal.get("route_contamination_reasons") or [],
@@ -6694,6 +6748,8 @@ def build_course(conn, request: dict) -> dict:
     trace_same_role_soft_demote_delta = 0.0
     trace_gangnam_editorial_soft_demote_count = 0
     trace_gangnam_editorial_soft_demote_delta = 0.0
+    trace_gangnam_representative_support_boost_count = 0
+    trace_gangnam_representative_support_boost_total = 0.0
     trace_route_contamination_count = 0
     trace_cross_flow_candidate_count = 0
     trace_lifestyle_mismatch_count = 0
@@ -8547,6 +8603,14 @@ def build_course(conn, request: dict) -> dict:
             for item in scored
             if item[3].get("gangnam_editorial_soft_demote_applied")
         )
+        trace_gangnam_representative_support_boost_count += sum(
+            1 for item in scored if item[3].get("gangnam_representative_support_boost_applied")
+        )
+        trace_gangnam_representative_support_boost_total += sum(
+            float(item[3].get("gangnam_representative_support_boost") or 0.0)
+            for item in scored
+            if item[3].get("gangnam_representative_support_boost_applied")
+        )
         trace_route_contamination_count += sum(1 for item in scored if item[3].get("route_contamination_demote", 0.0) > 0)
         trace_night_operating_confidence_count += sum(1 for item in scored if item[3].get("night_operating_confidence", 0.0) > 0)
         trace_indoor_night_confidence_demote_count += sum(1 for item in scored if item[3].get("indoor_night_confidence_demote", 0.0) > 0)
@@ -9041,6 +9105,9 @@ def build_course(conn, request: dict) -> dict:
         "gangnam_editorial_soft_demote_applied": bool(trace_gangnam_editorial_soft_demote_count),
         "gangnam_editorial_soft_demote_count": trace_gangnam_editorial_soft_demote_count,
         "gangnam_editorial_soft_demote_delta": round(trace_gangnam_editorial_soft_demote_delta, 4),
+        "gangnam_representative_support_boost_applied": bool(trace_gangnam_representative_support_boost_count),
+        "gangnam_representative_support_boost_count": trace_gangnam_representative_support_boost_count,
+        "gangnam_representative_support_boost": round(trace_gangnam_representative_support_boost_total, 4),
         "euljiro_mood_label_applied": bool(request.get("euljiro_mood_label_applied")),
         "euljiro_night_mode_removed": bool(request.get("euljiro_night_mode_removed")),
         "night_friendly_time_policy": request.get("night_friendly_time_policy") if isinstance(request, dict) else None,
@@ -9139,6 +9206,8 @@ def build_course(conn, request: dict) -> dict:
             same_role_soft_demote_delta=trace_same_role_soft_demote_delta,
             gangnam_editorial_soft_demote_applied_count=trace_gangnam_editorial_soft_demote_count,
             gangnam_editorial_soft_demote_delta=trace_gangnam_editorial_soft_demote_delta,
+            gangnam_representative_support_boost_applied_count=trace_gangnam_representative_support_boost_count,
+            gangnam_representative_support_boost=trace_gangnam_representative_support_boost_total,
             euljiro_mood_label_applied=bool(request.get("euljiro_mood_label_applied")),
             euljiro_night_mode_removed=bool(request.get("euljiro_night_mode_removed")),
             default_preset_mode=default_preset_mode,
