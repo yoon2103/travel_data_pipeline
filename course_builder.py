@@ -1061,6 +1061,9 @@ def _gangnam_representative_support_boost(
     if not isinstance(previous_place, dict) or str(target_slot or "") == "anchor":
         return 0.0, None
 
+    name_text = _normalize_city_token(" ".join(str(place.get(key) or "") for key in (
+        "name", "place_name",
+    )))
     text = _normalize_city_token(" ".join(str(place.get(key) or "") for key in (
         "name", "place_name", "category", "category_name", "description", "overview"
     )))
@@ -1083,6 +1086,14 @@ def _gangnam_representative_support_boost(
     matched = [term for term in representative_terms if _normalize_city_token(term) in text]
     if not matched:
         return 0.0, None
+    if _is_meal_semantic_candidate(place):
+        explicit_name_match = [
+            term for term in representative_terms
+            if _normalize_city_token(term) in name_text
+        ]
+        if not explicit_name_match:
+            return 0.0, None
+        matched = explicit_name_match
     return 0.035, ",".join(matched[:3])
 
 
