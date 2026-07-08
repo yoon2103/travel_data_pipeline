@@ -12,11 +12,14 @@ try:
 except ImportError:
     _PGVECTOR_AVAILABLE = False
 
+_PGVECTOR_REGISTER_FAILED = False
+
 # ---------------------------------------------------------------------------
 # Connection
 # ---------------------------------------------------------------------------
 
 def get_connection() -> psycopg2.extensions.connection:
+    global _PGVECTOR_REGISTER_FAILED
     conn = psycopg2.connect(
         host=config.DB_HOST,
         port=config.DB_PORT,
@@ -25,8 +28,15 @@ def get_connection() -> psycopg2.extensions.connection:
         password=config.DB_PASSWORD,
         cursor_factory=psycopg2.extras.DictCursor,
     )
-    if _PGVECTOR_AVAILABLE:
-        _register_vector(conn)
+    if _PGVECTOR_AVAILABLE and not _PGVECTOR_REGISTER_FAILED:
+        try:
+            _register_vector(conn)
+        except psycopg2.ProgrammingError as exc:
+            if "vector type not found" not in str(exc):
+                conn.close()
+                raise
+            _PGVECTOR_REGISTER_FAILED = True
+            logger.warning("pgvector type not found; continuing without vector adapter")
     return conn
 
 

@@ -1,12 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import MobileShell from './components/common/MobileShell';
 import HomeScreen from './screens/day-trip/HomeScreen';
 import ConditionScreen from './screens/day-trip/ConditionScreen';
 import CourseResultScreen from './screens/day-trip/CourseResultScreen';
+import ExploreNearbyScreen from './screens/day-trip/ExploreNearbyScreen';
 import MyScreen from './screens/day-trip/MyScreen';
 
+const SCREEN_HASHES = {
+  home: '#/home',
+  explore: '#/explore',
+  my: '#/my',
+};
+
+function getInitialScreen(initialScreen) {
+  if (typeof window === 'undefined') return initialScreen;
+  if (window.location.hash === '#/explore') return 'explore';
+  if (window.location.hash === '#/my') return 'my';
+  return initialScreen;
+}
+
 function DayTripApp({ initialScreen = 'home', previewFrame = false }) {
-  const [screen, setScreen] = useState(initialScreen);
+  const [screen, setScreenState] = useState(() => getInitialScreen(initialScreen));
   const [courseParams, setCourseParams] = useState({
     // HomeScreen이 채움
     region:             null,
@@ -23,7 +37,23 @@ function DayTripApp({ initialScreen = 'home', previewFrame = false }) {
     walk:     '보통',
     density:  '적당히',
   });
-  const tabMap = { home: 'home', condition: 'home', result: 'home', my: 'my' };
+  const tabMap = { home: 'home', condition: 'home', result: 'home', explore: 'explore', my: 'my' };
+
+  function setScreen(nextScreen) {
+    setScreenState(nextScreen);
+    if (!previewFrame && SCREEN_HASHES[nextScreen] && window.location.hash !== SCREEN_HASHES[nextScreen]) {
+      window.history.replaceState(null, '', SCREEN_HASHES[nextScreen]);
+    }
+  }
+
+  useEffect(() => {
+    if (previewFrame) return undefined;
+    const handleHashChange = () => {
+      setScreenState(getInitialScreen('home'));
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [previewFrame]);
 
   function handleParamChange(key, val) {
     setCourseParams(prev => ({ ...prev, [key]: val }));
@@ -31,11 +61,17 @@ function DayTripApp({ initialScreen = 'home', previewFrame = false }) {
 
   function handleTabChange(tab) {
     if (tab === 'home') setScreen('home');
+    if (tab === 'explore') setScreen('explore');
     if (tab === 'saved' || tab === 'my') setScreen('my');
   }
 
   function handleRegenerateCourse(prefillParams) {
     setCourseParams(prev => ({ ...prev, ...prefillParams }));
+    setScreen('condition');
+  }
+
+  function handleExploreCourse(params) {
+    setCourseParams(prev => ({ ...prev, ...params, template: params.template || prev.template || 'standard' }));
     setScreen('condition');
   }
 
@@ -57,6 +93,12 @@ function DayTripApp({ initialScreen = 'home', previewFrame = false }) {
           courseParams={courseParams}
           onParamChange={handleParamChange}
           onNext={() => setScreen('result')}
+        />
+      )}
+      {screen === 'explore' && (
+        <ExploreNearbyScreen
+          onCreateCourse={handleExploreCourse}
+          onCreateStayCourse={handleExploreCourse}
         />
       )}
       {screen === 'result' && (

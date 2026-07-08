@@ -3,6 +3,7 @@ export default function MobileShell({ children, activeTab = 'home', onTabChange,
     previewFrame && (import.meta.env.DEV || import.meta.env.VITE_SHOW_SCREEN_REVIEW === 'true');
   const tabs = [
     { id: 'home', label: '홈', icon: HomeIcon },
+    { id: 'explore', label: '둘러보기', icon: CompassIcon },
     { id: 'saved', label: '저장', icon: HeartIcon },
     { id: 'my', label: '마이', icon: UserIcon },
   ];
@@ -88,6 +89,15 @@ function HeartIcon({ active }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <path d="M12 21C12 21 3 14.5 3 8.5A4.5 4.5 0 017.5 4c1.8 0 3.2.9 4.5 2 1.3-1.1 2.7-2 4.5-2A4.5 4.5 0 0121 8.5c0 6-9 12.5-9 12.5z"
         stroke={active ? '#2563eb' : '#9ca3af'} strokeWidth="1.8" fill={active ? '#dbeafe' : 'none'}/>
+    </svg>
+  );
+}
+
+function CompassIcon({ active }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke={active ? '#2563eb' : '#9ca3af'} strokeWidth="1.8" fill={active ? '#dbeafe' : 'none'} />
+      <path d="M15.5 8.5l-2.2 5.1-4.8 1.9 2.2-5.1 4.8-1.9z" stroke={active ? '#2563eb' : '#9ca3af'} strokeWidth="1.8" strokeLinejoin="round" />
     </svg>
   );
 }

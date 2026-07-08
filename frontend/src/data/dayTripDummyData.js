@@ -112,3 +112,34 @@ export const STATIC_ANCHORS = {
     { zone_id: 'jeonbuk_gunsan',    name: '군산 주변',        center_lat: 35.9675, center_lon: 126.7368 },
   ],
 };
+
+export const HERO_FALLBACK_IMAGE = HERO_IMAGES.city;
+
+export const HERO_SLIDES = [
+  { key: 'city', image: HERO_IMAGES.city },
+  { key: 'sea', image: HERO_IMAGES.sea },
+  { key: 'valley', image: HERO_IMAGES.valley },
+];
+
+export const THEME_SEED_TO_MOOD = {
+  cafe: '카페 투어',
+  food: '맛집 탐방',
+  history: '역사 문화',
+  walk: '조용한 산책',
+  urban: '도심 감성',
+  nature: '자연 선택',
+  night: '도심 감성',
+  nightview: '도심 감성',
+  lifestyle: '도심 감성',
+};
+
+export const SEOUL_CURATED_ANCHOR_ZONE_IDS = [
+  'seoul_bukchon',
+  'seoul_seongsu',
+  'seoul_euljiro_night',
+  'seoul_euljiro_mood',
+  'seoul_hannam',
+  'seoul_gangnam',
+  'seoul_hangang',
+  'seoul_yeouido',
+];

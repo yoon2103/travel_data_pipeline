@@ -7,6 +7,7 @@ Usage:
 import re
 import uuid
 import logging
+from math import cos, radians
 from typing import Optional
 
 import psycopg2.extras
@@ -168,6 +169,59 @@ class RecalculateRequest(BaseModel):
     current_places: Optional[list[RecalculatePlace]] = None
 
 
+def _category_label(category_id: int | None, visit_role: str | None = None) -> str:
+    role = str(visit_role or "").lower()
+    if role == "cafe":
+        return "카페"
+    if role == "meal":
+        return "식당"
+    if role in {"walk", "spot"}:
+        return "둘러보기"
+    if category_id == 39:
+        return "음식점"
+    if category_id == 14:
+        return "문화/관광"
+    if category_id == 12:
+        return "관광지"
+    return "장소"
+
+
+def _operation_status(opening_hours) -> dict:
+    if isinstance(opening_hours, dict):
+        open_now = opening_hours.get("open_now")
+        if open_now is True:
+            return {"label": "영업 중", "status": "open"}
+        if open_now is False:
+            return {"label": "영업 종료 가능", "status": "closed"}
+    return {"label": "운영 정보 확인 필요", "status": "unknown"}
+
+
+def _place_image(row: dict) -> str | None:
+    return row.get("first_image_url") or row.get("first_image_thumb_url")
+
+
+def _serialize_explore_place(row: dict, *, distance_m: int | None = None) -> dict:
+    op = _operation_status(row.get("opening_hours"))
+    return {
+        "place_id": str(row.get("place_id")),
+        "name": row.get("name"),
+        "category": _category_label(row.get("category_id"), row.get("visit_role")),
+        "category_id": row.get("category_id"),
+        "visit_role": row.get("visit_role"),
+        "region_1": row.get("region_1"),
+        "region_2": row.get("region_2"),
+        "latitude": row.get("latitude"),
+        "longitude": row.get("longitude"),
+        "distance_m": distance_m,
+        "rating": float(row["rating"]) if row.get("rating") is not None else None,
+        "review_count": row.get("review_count"),
+        "view_count": row.get("view_count"),
+        "image_url": _place_image(row),
+        "operation_status": op["status"],
+        "operation_label": op["label"],
+    }
+
+
 def _candidates_by_role(conn, region: str, role: str, exclude_ids: set, limit: int = 10) -> list:
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
@@ -208,6 +262,107 @@ def get_regions():
             )
             regions = [row[0] for row in cur.fetchall()]
         return {"regions": regions}
+    finally:
+        conn.close()
+
+
+@app.get("/api/explore/destinations")
+def search_explore_destinations(query: str, limit: int = 8):
+    """목적지 검색용 장소 후보를 반환한다."""
+    q = (query or "").strip()
+    if len(q) < 2:
+        return {"destinations": []}
+
+    safe_limit = max(1, min(int(limit or 8), 20))
+    conn = db_client.get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT place_id, name, category_id, visit_role, region_1, region_2,
+                       latitude, longitude, rating, review_count, view_count,
+                       first_image_url, first_image_thumb_url, opening_hours
+                FROM places
+                WHERE is_active = TRUE
+                  AND latitude IS NOT NULL
+                  AND longitude IS NOT NULL
+                  AND (
+                    name ILIKE %(pattern)s
+                    OR region_1 ILIKE %(pattern)s
+                    OR region_2 ILIKE %(pattern)s
+                  )
+                ORDER BY
+                  CASE WHEN name ILIKE %(prefix)s THEN 0 ELSE 1 END,
+                  view_count DESC NULLS LAST,
+                  review_count DESC NULLS LAST,
+                  rating DESC NULLS LAST
+                LIMIT %(limit)s
+                """,
+                {"pattern": f"%{q}%", "prefix": f"{q}%", "limit": safe_limit},
+            )
+            rows = [dict(r) for r in cur.fetchall()]
+        return {"destinations": [_serialize_explore_place(r) for r in rows]}
+    finally:
+        conn.close()
+
+
+@app.get("/api/explore/nearby")
+def get_nearby_popular_places(lat: float, lon: float, radius_m: int = 1000, limit: int = 30):
+    """선택 좌표 주변의 최근 인기순 장소를 반환한다."""
+    safe_radius_m = min(max(int(radius_m or 1000), 100), 3000)
+    safe_limit = max(1, min(int(limit or 30), 50))
+    radius_km = safe_radius_m / 1000.0
+    lat_delta = radius_km / 111.0
+    lon_delta = radius_km / max(111.0 * abs(cos(radians(float(lat)))), 1.0)
+
+    conn = db_client.get_connection()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT place_id, name, category_id, visit_role, region_1, region_2,
+                       latitude, longitude, rating, review_count, view_count,
+                       first_image_url, first_image_thumb_url, opening_hours
+                FROM places
+                WHERE is_active = TRUE
+                  AND latitude IS NOT NULL
+                  AND longitude IS NOT NULL
+                  AND latitude BETWEEN %(min_lat)s AND %(max_lat)s
+                  AND longitude BETWEEN %(min_lon)s AND %(max_lon)s
+                ORDER BY
+                  view_count DESC NULLS LAST,
+                  review_count DESC NULLS LAST,
+                  rating DESC NULLS LAST
+                LIMIT %(fetch_limit)s
+                """,
+                {
+                    "min_lat": float(lat) - lat_delta,
+                    "max_lat": float(lat) + lat_delta,
+                    "min_lon": float(lon) - lon_delta,
+                    "max_lon": float(lon) + lon_delta,
+                    "fetch_limit": safe_limit * 5,
+                },
+            )
+            rows = [dict(r) for r in cur.fetchall()]
+
+        places = []
+        for row in rows:
+            distance_km = _haversine(float(lat), float(lon), float(row["latitude"]), float(row["longitude"]))
+            if distance_km <= radius_km:
+                places.append(_serialize_explore_place(row, distance_m=int(round(distance_km * 1000))))
+        places.sort(
+            key=lambda p: (
+                -(p.get("view_count") or 0),
+                -(p.get("review_count") or 0),
+                -(p.get("rating") or 0),
+                p.get("distance_m") or 999999,
+            )
+        )
+        return {
+            "center": {"latitude": float(lat), "longitude": float(lon)},
+            "radius_m": safe_radius_m,
+            "places": places[:safe_limit],
+        }
     finally:
         conn.close()
 
